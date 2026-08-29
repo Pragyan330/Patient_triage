@@ -1,0 +1,33 @@
+# --- secrets (rule: API keys never committed) ---
+.env
+.env.*
+!.env.example
+
+# --- local venv ---
+.venv/
+venv/
+
+# --- rule 4: simulation + frontend are local-only, never committed ---
+sim/
+simulation/
+frontend/
+scratch/
+
+# --- python ---
+__pycache__/
+*.py[cod]
+*.egg-info/
+.pytest_cache/
+.ipynb_checkpoints/
+
+# --- pageindex / corpus artifacts ---
+corpus/
+*.pageindex.json
+index_cache/
+results/
+
+# --- os / editor ---
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/

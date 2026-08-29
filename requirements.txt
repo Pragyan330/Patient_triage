@@ -1,0 +1,9 @@
+# Patient Triage — grounding module
+# python 3.12 (3.14 avoided: not all wheels available yet)
+pageindex==0.2.11        # vectorless tree-index RAG over protocol PDFs
+mistralai==2.9.4         # Mistral SDK (OCR + chat). NB: v2 import path is `from mistralai.client import Mistral`
+litellm==1.98.0          # pageindex's model layer; routes "mistral/<model>"
+python-dotenv==1.2.3
+pymupdf==1.28.2          # local PDF inspection / table-fidelity checks
+pydantic==2.13.5         # output schema validation
+jsonschema==4.26.0       # input schema validation
