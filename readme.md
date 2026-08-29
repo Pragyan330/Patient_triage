@@ -3,7 +3,7 @@
 
 ---
 
-## The grounding module (`triage/`)
+## The grounding module (`grounding_module/`)
 
 Takes the initial assessment produced upstream — a reception form turned into a
 schema by an LLM — and returns a triage judgement in which **every clinical
@@ -11,7 +11,7 @@ claim is either computed deterministically or quoted from a protocol document
 with a page number a nurse can turn to**.
 
 ```python
-from triage import ground
+from grounding_module import ground
 import json
 
 result = ground(json.load(open("schema_initial_example.json")))
@@ -109,7 +109,7 @@ Last full run: 6/6 cases clean, 28/28 citations verbatim on the page they cite,
 
 | path | what it is |
 |---|---|
-| `triage/` | the shipped module |
+| `grounding_module/` | the shipped module |
 | `scripts/fetch_corpus.py` | downloads the protocol PDFs |
 | `corpus/` | the PDFs (gitignored) |
 | `sim/` | local debug tools — runner, REPL, viewer, tests (gitignored) |

@@ -5,7 +5,7 @@ turned into a schema by an LLM) and returns a triage judgement in which every
 clinical claim is either computed deterministically or quoted from a protocol
 document with a page number a nurse can turn to.
 
-    from triage import ground
+    from grounding_module import ground
 
     result = ground(initial_assessment_dict)
     result["grounded_esi"]        # 1 (most urgent) .. 5
