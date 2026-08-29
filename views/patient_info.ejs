@@ -1,0 +1,160 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Patient Intake - PatientTriage.ai</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="/css/style.css">
+</head>
+
+<body>
+
+    <div class="container">
+        <div class="header">
+            <h1>Patient Intake</h1>
+            <p>Rapid capture of initial presentation and vitals</p>
+        </div>
+
+        <form id="intakeForm" onsubmit="handleSubmit(event)">
+
+            <!-- Section 1: Demographics & Arrival -->
+            <div class="glass-panel">
+                <h2 class="section-title">Demographics & Arrival</h2>
+                <div class="form-grid">
+                    <div class="form-group full-width">
+                        <label for="patientName">Patient Name</label>
+                        <input type="text" id="patientName" name="patientName" required placeholder="Full Name">
+                    </div>
+                    <div class="form-group">
+                        <label for="age">Age</label>
+                        <div style="display: flex; gap: 0.5rem;">
+                            <input type="number" id="age" name="age" min="0" max="130" required
+                                placeholder="Age" style="flex: 1;">
+                            <select id="ageUnit" name="ageUnit" style="flex: 1;" required>
+                                <option value="years" selected>Years</option>
+                                <option value="months">Months</option>
+                                <option value="days">Days</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label for="arrivalMode">Arrival Mode</label>
+                        <select id="arrivalMode" name="arrivalMode" required>
+                            <option value="" disabled selected>Select arrival mode...</option>
+                            <option value="walk_in">Walk-in</option>
+                            <option value="ambulance">Ambulance</option>
+                            <option value="police">Police/Law Enforcement</option>
+                            <option value="other">Other</option>
+                        </select>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Section 2: Clinical Presentation -->
+            <div class="glass-panel">
+                <h2 class="section-title">Clinical Presentation</h2>
+                <div class="form-grid">
+                    <div class="form-group full-width">
+                        <label for="chiefComplaint">Chief Complaint</label>
+                        <textarea id="chiefComplaint" name="chiefComplaint" required
+                            placeholder="What the patient says is wrong, in their own words..."></textarea>
+                    </div>
+
+                    <div class="form-group full-width">
+                        <label>Level of Consciousness (AVPU)</label>
+                        <div class="radio-group">
+                            <div class="radio-card">
+                                <input type="radio" id="avpu-a" name="avpu" value="alert" required>
+                                <label for="avpu-a">
+                                    <strong>Alert</strong>
+                                    <span>Fully awake</span>
+                                </label>
+                            </div>
+                            <div class="radio-card">
+                                <input type="radio" id="avpu-v" name="avpu" value="voice">
+                                <label for="avpu-v">
+                                    <strong>Voice</strong>
+                                    <span>Responds to voice</span>
+                                </label>
+                            </div>
+                            <div class="radio-card">
+                                <input type="radio" id="avpu-p" name="avpu" value="pain">
+                                <label for="avpu-p">
+                                    <strong>Pain</strong>
+                                    <span>Responds to pain</span>
+                                </label>
+                            </div>
+                            <div class="radio-card">
+                                <input type="radio" id="avpu-u" name="avpu" value="unresponsive">
+                                <label for="avpu-u">
+                                    <strong>Unresponsive</strong>
+                                    <span>No response</span>
+                                </label>
+                            </div>
+                        </div>
+                        <span class="help-text">Select the highest level of response observed.</span>
+                    </div>
+
+                    <div class="form-group full-width">
+                        <label for="knownConditions">Known Conditions & Medical History</label>
+                        <textarea id="knownConditions" name="knownConditions"
+                            placeholder="E.g., Type 2 Diabetes, Hypertension... (Leave blank if none or unknown)"></textarea>
+                    </div>
+
+                    <div class="form-group full-width">
+                        <label for="medications">Current Medications</label>
+                        <textarea id="medications" name="medications"
+                            placeholder="E.g., Bisoprolol, Metformin... (Leave blank if none or unknown)"></textarea>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Section 3: Vitals (First Set) -->
+            <div class="glass-panel">
+                <h2 class="section-title">Initial Vitals</h2>
+                <p class="help-text" style="margin-top: -1rem; margin-bottom: 1.5rem;">Record available vitals. Leave
+                    blank if not measured.</p>
+                <div class="form-grid">
+                    <div class="form-group">
+                        <label for="heartRate">Heart Rate (bpm)</label>
+                        <input type="number" id="heartRate" name="heartRate" min="0" max="300" placeholder="e.g., 88">
+                    </div>
+                    <div class="form-group">
+                        <label for="respiratoryRate">Respiratory Rate (breaths/min)</label>
+                        <input type="number" id="respiratoryRate" name="respiratoryRate" min="0" max="100"
+                            placeholder="e.g., 22">
+                    </div>
+                    <div class="form-group">
+                        <label for="spo2">SpO2 (%)</label>
+                        <input type="number" id="spo2" name="spo2" min="0" max="100" placeholder="e.g., 94">
+                    </div>
+                    <div class="form-group">
+                        <label for="systolicBp">Systolic BP (mmHg)</label>
+                        <input type="number" id="systolicBp" name="systolicBp" min="0" max="300"
+                            placeholder="e.g., 104">
+                    </div>
+                    <div class="form-group">
+                        <label for="diastolicBp">Diastolic BP (mmHg)</label>
+                        <input type="number" id="diastolicBp" name="diastolicBp" min="0" max="200"
+                            placeholder="e.g., 68">
+                    </div>
+                    <div class="form-group">
+                        <label for="temperature">Temperature (°C)</label>
+                        <input type="number" id="temperature" name="temperature" step="0.1" min="30" max="45"
+                            placeholder="e.g., 36.8">
+                    </div>
+                </div>
+            </div>
+
+            <button type="submit" class="btn-submit">Submit to Intake Normaliser</button>
+        </form>
+    </div>
+
+    <script src="/js/script.js"></script>
+</body>
+
+</html>
