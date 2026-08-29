@@ -1,0 +1,182 @@
+[
+  {
+    "patient_id": "P-001",
+    "profile": {
+      "patientId": "P-001",
+      "age": 55,
+      "sex": "M",
+      "arrivalMode": "ambulance",
+      "knownConditions": ["hypertension"],
+      "medications": ["lisinopril"],
+      "allergies": []
+    },
+    "concerns": [
+      {
+        "concern": "Chest pain radiating to left arm",
+        "clinical_shorthand": "?ACS",
+        "implied_esi": 2,
+        "final_esi": 2,
+        "time_to_treatment_minutes": 10,
+        "evidence": [],
+        "nurse_summary": "55yo male with crushing chest pain."
+      }
+    ],
+    "provisional_esi": 2,
+    "grounded_esi": 2,
+    "retrieval_ms": 1200,
+    "initial_vitals": {
+      "respiratory_rate": 20,
+      "spo2": 95,
+      "on_supplemental_oxygen": false,
+      "systolic_bp": 140,
+      "pulse": 90,
+      "consciousness": "A",
+      "temperature_c": 37.1
+    },
+    "arrival_minute": -10
+  },
+  {
+    "patient_id": "P-002",
+    "profile": {
+      "patientId": "P-002",
+      "age": 22,
+      "sex": "F",
+      "arrivalMode": "walk-in",
+      "knownConditions": [],
+      "medications": [],
+      "allergies": ["penicillin"]
+    },
+    "concerns": [
+      {
+        "concern": "Sprained ankle, isolated injury",
+        "clinical_shorthand": "ankle pain",
+        "implied_esi": 4,
+        "final_esi": 4,
+        "time_to_treatment_minutes": null,
+        "evidence": [],
+        "nurse_summary": "22yo female rolled ankle playing soccer."
+      }
+    ],
+    "provisional_esi": 4,
+    "grounded_esi": 4,
+    "retrieval_ms": 800,
+    "initial_vitals": {
+      "respiratory_rate": 16,
+      "spo2": 99,
+      "on_supplemental_oxygen": false,
+      "systolic_bp": 120,
+      "pulse": 75,
+      "consciousness": "A",
+      "temperature_c": 36.8
+    },
+    "arrival_minute": -30
+  },
+  {
+    "patient_id": "P-003",
+    "profile": {
+      "patientId": "P-003",
+      "age": 19,
+      "sex": "M",
+      "arrivalMode": "walk-in",
+      "knownConditions": [],
+      "medications": [],
+      "allergies": []
+    },
+    "concerns": [
+      {
+        "concern": "Severe abdominal pain with vomiting",
+        "clinical_shorthand": "?appendicitis",
+        "implied_esi": 3,
+        "final_esi": 3,
+        "time_to_treatment_minutes": null,
+        "evidence": [],
+        "nurse_summary": "19yo male RLQ pain."
+      }
+    ],
+    "provisional_esi": 3,
+    "grounded_esi": 3,
+    "retrieval_ms": 1100,
+    "initial_vitals": {
+      "respiratory_rate": 22,
+      "spo2": 98,
+      "on_supplemental_oxygen": false,
+      "systolic_bp": 110,
+      "pulse": 105,
+      "consciousness": "A",
+      "temperature_c": 38.2
+    },
+    "arrival_minute": -25
+  },
+  {
+    "patient_id": "P-004",
+    "profile": {
+      "patientId": "P-004",
+      "age": 30,
+      "sex": "M",
+      "arrivalMode": "walk-in",
+      "knownConditions": [],
+      "medications": [],
+      "allergies": []
+    },
+    "concerns": [
+      {
+        "concern": "Laceration requiring sutures",
+        "clinical_shorthand": "finger lac",
+        "implied_esi": 4,
+        "final_esi": 4,
+        "time_to_treatment_minutes": null,
+        "evidence": [],
+        "nurse_summary": "30yo male cut finger cooking."
+      }
+    ],
+    "provisional_esi": 4,
+    "grounded_esi": 4,
+    "retrieval_ms": 900,
+    "initial_vitals": {
+      "respiratory_rate": 14,
+      "spo2": 100,
+      "on_supplemental_oxygen": false,
+      "systolic_bp": 125,
+      "pulse": 80,
+      "consciousness": "A",
+      "temperature_c": 37.0
+    },
+    "arrival_minute": -50
+  },
+  {
+    "patient_id": "P-005",
+    "profile": {
+      "patientId": "P-005",
+      "age": 78,
+      "sex": "F",
+      "arrivalMode": "walk-in",
+      "knownConditions": ["hypertension", "type 2 diabetes"],
+      "medications": ["bisoprolol", "metformin"],
+      "allergies": []
+    },
+    "concerns": [
+      {
+        "concern": "Infection spreading beyond its original site and affecting how her body functions",
+        "clinical_shorthand": "?sepsis",
+        "implied_esi": 2,
+        "final_esi": 2,
+        "time_to_treatment_minutes": 60,
+        "evidence": [],
+        "nurse_summary": "78yo female, altered mental status, suspected UTI."
+      }
+    ],
+    "provisional_esi": 3,
+    "grounded_esi": 3,
+    "retrieval_ms": 4970,
+    "initial_vitals": {
+      "respiratory_rate": 22,
+      "spo2": 94,
+      "on_supplemental_oxygen": false,
+      "systolic_bp": 104,
+      "pulse": 88,
+      "consciousness": "A",
+      "temperature_c": 36.8
+    },
+    "arrival_minute": -2
+  }
+]
