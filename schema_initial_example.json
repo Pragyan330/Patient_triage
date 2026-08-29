@@ -1,0 +1,27 @@
+{
+  "concern": "An infection that has spread beyond its original site and is starting to affect how her body is working",
+  "what_keeps_it_open": "New confusion with a raised breathing rate and a blood pressure at the low end of her likely normal. Nothing here rules it out.",
+  "arrival_mode_note": "Walked in rather than arriving by ambulance, which reflects access and family judgement, not severity. It should not lower concern.",
+  "medication_effect": "She takes bisoprolol, a beta-blocker, which blunts the heart-rate rise expected with infection. Her heart rate of 88 may look reassuring and should not be read that way.",
+  "allergy_note": "No known allergies recorded, so no constraint on early antibiotics if this is confirmed.",
+  "age_sex_note": "At 78, fever is frequently absent in serious infection. Her 36.8C is not evidence against it, and confusion may be the only presenting sign.",
+  "vitals_read": {
+    "heart_rate": 88, "respiratory_rate": 22, "systolic_bp": 104,
+    "spo2": 94, "temperature_c": 36.8,
+    "not_measured": ["diastolic_bp", "pain_score"]
+  },
+  "lookups": [
+    {
+      "intent": "escalation_trigger",
+      "question": "For an adult, what respiratory rate, systolic blood pressure and new-confusion values trigger clinical escalation, and what aggregate score requires an emergency response?",
+      "presentation_terms": ["new confusion", "raised respiratory rate", "low systolic", "AVPU"],
+      "prefer_document": "news2",
+      "vitals_read": { "respiratory_rate": 22, "systolic_bp": 104, "spo2": 94 },
+      "answer_shape": "numeric_threshold",
+      "priority": 1
+    }
+  ],
+  "implied_esi": 2,
+  "implied_esi_reasoning": "Two physiological parameters outside range plus new confusion, in an age group where the usual warning sign is absent. Provisional only, pending protocol lookup."
+}
+
