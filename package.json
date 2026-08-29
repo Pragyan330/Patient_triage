@@ -20,6 +20,8 @@
   },
   "homepage": "https://github.com/Pragyan330/Patient_triage#readme",
   "dependencies": {
+    "@mistralai/mistralai": "^2.6.4",
+    "dotenv": "^17.4.2",
     "ejs": "^6.0.1",
     "ejs-mate": "^4.0.0",
     "express": "^5.2.1",

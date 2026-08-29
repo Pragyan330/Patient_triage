@@ -38,13 +38,24 @@ function handleSubmit(event) {
         vitals: vitals
     };
 
-    console.log("data");
-
-    // In a real implementation, this would be sent to the backend/LLM API
-    console.log("Payload ready for LLM Intake Normaliser:", JSON.stringify(payload, null, 2));
-
-    // For demo purposes, alert the user
-    alert("Patient data captured successfully! Check console for the JSON payload ready for the LLM.");
+    // Send payload to backend
+    console.log("Sending payload to backend...");
+    fetch("/api/triage", {
+        method: "POST",
+        headers: {
+            "Content-Type": "application/json"
+        },
+        body: JSON.stringify(payload)
+    })
+    .then(response => response.json())
+    .then(data => {
+        console.log("Success! Received generated schema:", data);
+        alert("Patient data processed and sent to Pragyan's Server successfully!");
+    })
+    .catch(error => {
+        console.error("Error sending data:", error);
+        alert("Failed to process data. Check console for details.");
+    });
 
     // Optional: reset form
     // event.target.reset();
