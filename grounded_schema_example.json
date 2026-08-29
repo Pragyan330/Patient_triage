@@ -1,0 +1,38 @@
+{
+  "patient_id": "P-007",
+  "concerns": [
+    {
+      "concern": "Infection spreading beyond its original site and affecting how her body functions",
+      "clinical_shorthand": "?sepsis",
+      "implied_esi": 2,
+      "final_esi": 2,
+      "time_to_treatment_minutes": 60,
+      "evidence": [
+        {
+          "document": "NEWS2 (RCP, 2017)",
+          "page": 14,
+          "criterion": "An aggregate score of 5 or above is the threshold for urgent clinical review."
+        }
+      ],
+      "nurse_summary": "NEWS2 aggregate 5 with new confusion. Afebrile but beta-blocked. Antibiotics within 60 min if confirmed."
+    },
+    {
+      "concern": "Blood sugar or salt imbalance causing the confusion",
+      "clinical_shorthand": "?metabolic",
+      "implied_esi": 2,
+      "final_esi": 2,
+      "time_to_treatment_minutes": null,
+      "evidence": [
+        {
+          "document": "ESI v4 Handbook (AHRQ, 2012)",
+          "page": 21,
+          "criterion": "New altered mental status without identified cause is a high-risk presentation, level 2."
+        }
+      ],
+      "nurse_summary": "Altered mental status, no bedside glucose recorded."
+    }
+  ],
+  "provisional_esi": 2,
+  "grounded_esi": 2,
+  "retrieval_ms": 4970
+}
