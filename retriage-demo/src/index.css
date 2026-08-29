@@ -1,0 +1,321 @@
+:root {
+  --bg-dark: #0f1115;
+  --panel-bg: #1a1d24;
+  --text-main: #e2e8f0;
+  --text-muted: #94a3b8;
+  --border-color: #334155;
+  
+  --red-alert: #ff4d4d;
+  --orange-warn: #ff9933;
+  --yellow-attn: #ffcc00;
+  --green-safe: #339933;
+}
+
+body {
+  margin: 0;
+  font-family: 'Inter', system-ui, -apple-system, sans-serif;
+  background-color: var(--bg-dark);
+  color: var(--text-main);
+  -webkit-font-smoothing: antialiased;
+}
+
+/* Typography for data */
+.patient-id, .esi-badge, .news2-badge, .timer, .clock, .log-time, .log-id, input, select, textarea, .log-json {
+  font-family: 'Fira Code', 'Courier New', Courier, monospace;
+}
+
+/* Layout */
+.dashboard {
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+  overflow: hidden;
+}
+
+.header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 1rem 2rem;
+  background-color: #000;
+  border-bottom: 1px solid var(--border-color);
+}
+
+.header h1 {
+  margin: 0;
+  font-size: 1.2rem;
+  font-weight: 600;
+  letter-spacing: 0.5px;
+  color: #fff;
+}
+
+.clock-controls {
+  display: flex;
+  align-items: center;
+  gap: 2rem;
+}
+
+.clock {
+  font-size: 1.25rem;
+  font-weight: bold;
+  color: #00ffcc;
+  text-shadow: 0 0 5px rgba(0,255,204,0.5);
+}
+
+.speeds button {
+  background: transparent;
+  border: 1px solid var(--border-color);
+  color: var(--text-muted);
+  padding: 0.25rem 0.75rem;
+  cursor: pointer;
+  margin-left: 0.5rem;
+  border-radius: 4px;
+}
+
+.speeds button.active {
+  background: var(--border-color);
+  color: #fff;
+}
+
+.main-content {
+  display: flex;
+  flex: 1;
+  overflow: hidden;
+}
+
+/* Queue Panel */
+.queue-panel {
+  flex: 2;
+  padding: 1.5rem;
+  overflow-y: auto;
+  border-right: 1px solid var(--border-color);
+}
+
+.queue-panel h2 {
+  margin-top: 0;
+  font-size: 1.1rem;
+  color: var(--text-muted);
+}
+
+.patient-cards {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.patient-card {
+  background-color: var(--panel-bg);
+  border-radius: 8px;
+  padding: 1rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  transition: all 0.2s ease-in-out;
+}
+
+.card-header, .card-body, .card-footer, .card-actions {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.patient-id {
+  font-size: 1.1rem;
+  font-weight: 700;
+}
+
+.patient-demographic {
+  color: var(--text-muted);
+  font-size: 0.9rem;
+}
+
+.esi-badge, .news2-badge {
+  padding: 0.25rem 0.5rem;
+  border-radius: 4px;
+  font-weight: bold;
+  color: #000;
+  font-size: 0.9rem;
+}
+
+.complaint {
+  flex: 1;
+  margin-left: 1rem;
+  font-size: 0.95rem;
+}
+
+.timer {
+  font-size: 1.2rem;
+  font-weight: bold;
+}
+
+.card-actions {
+  justify-content: flex-end;
+  gap: 0.5rem;
+  border-top: 1px dashed var(--border-color);
+  padding-top: 0.75rem;
+  margin-top: 0.25rem;
+}
+
+.card-actions button {
+  background-color: #2d3748;
+  color: #fff;
+  border: none;
+  padding: 0.4rem 0.8rem;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 0.85rem;
+  transition: background 0.2s;
+}
+
+.card-actions button:hover {
+  background-color: #4a5568;
+}
+
+/* Side Panel */
+.side-panel {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  background-color: var(--panel-bg);
+}
+
+/* Vitals Form */
+.vitals-form {
+  padding: 1.5rem;
+  border-bottom: 1px solid var(--border-color);
+  background-color: #11141a;
+}
+
+.vitals-form h3 {
+  margin-top: 0;
+  font-size: 1.1rem;
+  color: #fff;
+  border-bottom: 1px solid var(--border-color);
+  padding-bottom: 0.5rem;
+}
+
+.vitals-form form {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1rem;
+}
+
+.vitals-form label {
+  display: flex;
+  flex-direction: column;
+  font-size: 0.85rem;
+  color: var(--text-muted);
+  gap: 0.25rem;
+}
+
+.vitals-form input[type="number"], .vitals-form select, .vitals-form textarea {
+  background: var(--bg-dark);
+  border: 1px solid var(--border-color);
+  color: #fff;
+  padding: 0.4rem;
+  border-radius: 4px;
+}
+
+.vitals-form input[type="checkbox"] {
+  align-self: flex-start;
+  margin-top: 0.5rem;
+}
+
+.override-form form {
+  grid-template-columns: 1fr;
+}
+
+.form-actions {
+  grid-column: 1 / -1;
+  display: flex;
+  gap: 1rem;
+  margin-top: 0.5rem;
+}
+
+.primary-btn {
+  background-color: #3182ce;
+  color: #fff;
+  border: none;
+  padding: 0.5rem 1rem;
+  border-radius: 4px;
+  cursor: pointer;
+}
+
+.danger-btn {
+  background-color: var(--red-alert);
+  color: #fff;
+  border: none;
+  padding: 0.5rem 1rem;
+  border-radius: 4px;
+  cursor: pointer;
+}
+
+/* Audit Log */
+.audit-log {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.audit-log h3 {
+  margin: 0;
+  padding: 1rem 1.5rem;
+  font-size: 1rem;
+  border-bottom: 1px solid var(--border-color);
+  background-color: #000;
+}
+
+.logs-container {
+  flex: 1;
+  overflow-y: auto;
+  padding: 1rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.log-entry {
+  background-color: var(--bg-dark);
+  border: 1px solid var(--border-color);
+  border-left: 4px solid var(--border-color);
+  border-radius: 4px;
+  padding: 0.75rem;
+  font-size: 0.85rem;
+}
+
+.log-critical {
+  border-left-color: var(--red-alert);
+}
+.log-warning {
+  border-left-color: var(--orange-warn);
+}
+.log-neutral {
+  border-left-color: var(--text-muted);
+}
+
+.log-summary {
+  display: flex;
+  gap: 1rem;
+  cursor: pointer;
+  margin-bottom: 0.25rem;
+}
+
+.log-time { color: var(--text-muted); }
+.log-id { font-weight: bold; color: #fff; }
+.log-trigger { color: #cbd5e1; text-transform: uppercase; font-size: 0.75rem; background: #334155; padding: 2px 6px; border-radius: 4px;}
+
+.log-desc {
+  color: var(--text-main);
+  margin-top: 0.25rem;
+}
+
+.log-json {
+  background-color: #000;
+  padding: 0.5rem;
+  border-radius: 4px;
+  overflow-x: auto;
+  font-size: 0.75rem;
+  color: #00ffcc;
+  margin-top: 0.5rem;
+}
