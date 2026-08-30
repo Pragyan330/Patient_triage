@@ -184,6 +184,64 @@ function OverridePanel({ patient, onClose, onDone }: {
   );
 }
 
+/**
+ * Put the department into surge and show what that changes.
+ *
+ * Worth watching during a demo, because the interesting part is what does NOT
+ * degrade. Under surge the expensive retrieval is rationed by acuity: ESI 4-5
+ * are triaged on the deterministic rules and NEWS2 alone, while ESI 1-3 keep
+ * their full workup and their citations. Rationing by arrival order instead
+ * would make the sick wait behind the well, which is the wrong trade.
+ */
+function SurgeToggle({ surge, setSurge }: { surge: any; setSurge: (s: any) => void }) {
+  useEffect(() => {
+    let stop = false;
+    const poll = async () => {
+      try {
+        const res = await fetch(`${API}/api/surge`);
+        if (res.ok && !stop) setSurge(await res.json());
+      } catch { /* service down; the header already says offline */ }
+    };
+    poll();
+    const t = setInterval(poll, 4000);
+    return () => { stop = true; clearInterval(t); };
+  }, [setSurge]);
+
+  const on = !!surge?.surging;
+
+  const toggle = async () => {
+    try {
+      const res = await fetch(`${API}/api/surge`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        // null hands control back to the arrival-rate monitor
+        body: JSON.stringify({ forced: on ? null : true }),
+      });
+      if (res.ok) setSurge(await res.json());
+    } catch { /* ignore */ }
+  };
+
+  return (
+    <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+      <button onClick={toggle} title={surge?.policy ?? 'Toggle surge mode'}
+        style={{
+          padding: '4px 12px', borderRadius: '4px', fontWeight: 600, cursor: 'pointer',
+          border: on ? '1px solid #ff9933' : '1px solid #3b475f',
+          background: on ? '#ff9933' : 'transparent',
+          color: on ? '#111' : '#8b93a3',
+        }}>
+        {on ? '● SURGE' : '○ surge'}
+      </button>
+      {surge && (
+        <span style={{ fontSize: '0.7em', color: on ? '#ff9933' : '#6f7684', maxWidth: 300 }}>
+          {surge.arrivals_per_min}/min
+          {on && ' · ESI 4-5 rationed, ESI 1-3 keep full grounding'}
+        </span>
+      )}
+    </div>
+  );
+}
+
 const inputStyle: React.CSSProperties = {
   width: '100%', marginBottom: '0.3rem', padding: '4px 7px', fontSize: '0.8em',
   background: '#0f1115', border: '1px solid #262c3a', borderRadius: '4px',
@@ -200,6 +258,7 @@ export default function RetriageQueue() {
   const [live, setLive] = useState(false);   // true when the service answers
   const [sourcesFor, setSourcesFor] = useState<string | null>(null);
   const [overrideFor, setOverrideFor] = useState<string | null>(null);
+  const [surge, setSurge] = useState<any>(null);
   const [logs, setLogs] = useState<AuditLogEntry[]>([]);
   const [simulationMinute, setSimulationMinuteState] = useState(0);
   const simulationMinuteRef = useRef(0);
@@ -364,6 +423,7 @@ export default function RetriageQueue() {
           </span>
         </h1>
         <div className="clock-controls">
+          <SurgeToggle surge={surge} setSurge={setSurge} />
           <div className="clock">Sim Time: T+{simulationMinute}m</div>
           <div className="speeds">
             <button className={speed === 0 ? 'active' : ''} onClick={() => setSpeed(0)}>Pause</button>

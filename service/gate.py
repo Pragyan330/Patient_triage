@@ -72,8 +72,24 @@ def as_grounded(initial: dict, gate: dict, news2: dict) -> dict:
             "criterion": citation.get("criterion") or gate.get("reasoning", ""),
         })
 
+    # A rule match is an observation, not an inference: "no pulse" is either
+    # true or it is not. So a complete gate read is high confidence even
+    # though nothing was retrieved. An incomplete one is not.
+    incomplete = gate.get("missing_fields") or []
+    gate_confidence = {
+        "level": "moderate" if incomplete else "high",
+        "score": 0.7 if incomplete else 0.95,
+        "red_flag_rule": gate.get("matched_rule_id"),
+        "reasons": (
+            [f"Red-flag rule {gate.get('matched_rule_id')} matched on directly "
+             f"observed findings; no model inference involved."]
+            + ([f"Screened without: {', '.join(incomplete)}."] if incomplete else [])),
+        "escalated_for_uncertainty": False,
+    }
+
     return {
         "patient_id": initial.get("patient_id") or "",
+        "confidence": gate_confidence,
         "concerns": [{
             "concern": gate.get("reasoning") or "Immediate life-saving intervention required",
             "clinical_shorthand": f"!{gate.get('matched_rule_id', 'red flag')}",
@@ -119,13 +135,36 @@ def apply_floor(grounded: dict, gate: dict) -> dict:
         return grounded
 
     current = grounded.get("grounded_esi")
-    if current is None or gate_esi < current:
+    floored = current is None or gate_esi < current
+    if floored:
         log.info("gate floor: ESI %s -> %s (%s)", current, gate_esi,
                  gate.get("matched_rule_id"))
         grounded["grounded_esi"] = gate_esi
         for concern in grounded.get("concerns", []):
             if concern.get("final_esi", 9) > gate_esi:
                 concern["final_esi"] = gate_esi
+
+    # Say so in the confidence. A red-flag match is a deterministic rule on
+    # observed findings, not a model inference - that is the strongest kind of
+    # support this system produces, and a clinician reading "high confidence"
+    # deserves to know whether it rests on a rule or on retrieval.
+    conf = grounded.get("confidence")
+    if isinstance(conf, dict):
+        rule = gate.get("matched_rule_id")
+        reason = (f"Red-flag rule {rule} matched on directly observed findings "
+                  f"({gate.get('reasoning', '').rstrip('.')}), giving ESI {gate_esi} "
+                  f"deterministically.")
+        if floored:
+            reason += f" That rule set the level, overriding the retrieved assessment."
+        conf.setdefault("reasons", []).insert(0, reason)
+        conf["red_flag_rule"] = rule
+        # A rule match is firmer evidence than a citation, so it should not
+        # leave a patient below "moderate" on paperwork gaps alone.
+        if conf.get("level") == "low":
+            conf["level"] = "moderate"
+            conf["reasons"].append(
+                "Raised from low: the acuity rests on a deterministic rule, not "
+                "on the incomplete data that lowered the score.")
 
     grounded["red_flag_gate"] = gate
     return grounded

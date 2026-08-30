@@ -35,6 +35,12 @@ class Config:
     max_retries: int = 5
     initial_backoff_seconds: float = 4.0
 
+    # Simultaneous model calls. The API tier is the bottleneck, so queue on our
+    # side rather than discovering the limit as 429s: six concurrent arrivals
+    # exhausted the retry budget and lost six patients in the first surge run.
+    # Waiting a second is always better than failing.
+    max_concurrent_llm: int = 2
+
     documents: dict[str, tuple[str, str]] = field(default_factory=lambda: dict(DOCUMENTS))
 
     def api_key(self) -> str:
