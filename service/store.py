@@ -22,6 +22,7 @@ demo and must not ship to a ward.
 from __future__ import annotations
 
 import itertools
+import logging
 import re
 import threading
 import time
@@ -32,6 +33,8 @@ from grounding_module import news2 as news2_mod
 from grounding_module.news2 import age_from_schema
 from retriage_loop import NewVitals, PatientState, retriage_check
 
+log = logging.getLogger(__name__)
+
 
 # The intake LLM fills patient_id from whatever the form gave it. Observed in
 # live runs: a person's full name ("Abhishek_Sonparote_202311XX") and the
@@ -39,18 +42,36 @@ from retriage_loop import NewVitals, PatientState, retriage_check
 # so two of them silently overwrite each other. Anything that is not clearly an
 # identifier gets a minted one, and the original is kept for traceability.
 NULLISH = {"", "null", "none", "nil", "undefined", "n/a", "na", "unknown", "-"}
-LOOKS_LIKE_ID = re.compile(r"^[A-Za-z]{0,6}[-_ ]?\d{1,10}[A-Za-z]?$")
 _MINTED = itertools.count(1)
+
+# An earlier version demanded digits immediately after an optional prefix
+# (^[A-Za-z]{0,6}[-_ ]?\d+$). That rejected perfectly ordinary identifiers -
+# P-OV1, ED-2024-001 - and replaced them with a minted TEST-nnn, which is worse
+# than the problem it was solving: a real MRN silently swapped for a fake one.
+MAX_ID_LENGTH = 20
+HAS_DIGIT = re.compile(r"\d")
+WORD = re.compile(r"[^\s_]+")
 
 
 def clean_patient_id(raw: object) -> tuple[str, str | None]:
-    """Return (usable_id, rejected_original)."""
+    """Return (usable_id, rejected_original).
+
+    An identifier is short, contains a digit, and is not a sentence. A name
+    fails on the digit ("Jane Doe") or on length and word count
+    ("Abhishek_Sonparote_202311XX"), both of which were seen in live runs.
+    Whatever is rejected is kept as source_patient_id, never discarded.
+    """
     text = "" if raw is None else str(raw).strip()
     if text.lower() in NULLISH:
         return f"TEST-{next(_MINTED):03d}", text or None
-    if LOOKS_LIKE_ID.match(text):
+
+    looks_like_id = (
+        len(text) <= MAX_ID_LENGTH
+        and HAS_DIGIT.search(text) is not None
+        and len(WORD.findall(text)) <= 2
+    )
+    if looks_like_id:
         return text, None
-    # a name, a sentence, anything else: not an identifier
     return f"TEST-{next(_MINTED):03d}", text
 
 
@@ -207,6 +228,63 @@ class Registry:
         self._apply(record, event, new_news2=total, new_red=red)
         event["news2"] = {"total": total, "single_param_red": red,
                           "previous": previous}
+        return event
+
+    def override_esi(self, patient_id: str, esi: int, *, reason: str,
+                     by: str = "nurse") -> dict:
+        """A nurse setting the ESI by hand. The one thing allowed to de-escalate.
+
+        retriage_loop is an escalate-only ratchet by design: automatic urgency
+        can move down the numbers and never back up, "except by a separate,
+        explicitly logged nurse action that is NOT part of this function."
+        This is that action, kept deliberately outside the loop.
+
+        A de-escalation is the dangerous direction - it moves a patient further
+        down the queue - so it requires a reason and is recorded as one. The
+        event goes in the same history as the automatic ones, flagged manual,
+        so the trail shows who decided what rather than implying the system did.
+        """
+        record = self._records[patient_id]
+        previous = record.state.esi_floor
+        esi = int(esi)
+        if not 1 <= esi <= 5:
+            raise ValueError(f"ESI must be 1-5, got {esi}")
+
+        direction = ("no change" if esi == previous
+                     else "escalation" if esi < previous else "de-escalation")
+        minute = self.now_minute()
+
+        event = {
+            "patient_id": patient_id,
+            "retriage_timestamp_min": minute,
+            "minutes_since_last_check": minute - record.state.last_check_minute,
+            "trigger": {"type": "manual_override",
+                        "detail": f"{by} set ESI {previous} -> {esi}. {reason}".strip()},
+            "previous_esi_floor": previous,
+            "new_esi_floor": esi,
+            "escalated": esi < previous,
+            "manual": True,
+            "overridden_by": by,
+            "override_reason": reason,
+            "direction": direction,
+            "confidence": {"level": "human",
+                           "basis": "Clinical judgement at the bedside, not a computed score."},
+            "evidence": [],
+            "nurse_summary": (f"MANUAL {direction.upper()}: ESI {previous} -> {esi} "
+                              f"by {by}. {reason}").strip(),
+            # A human de-escalation should be visible to the next person
+            # looking at the queue, not filed away silently.
+            "requires_human_review": direction == "de-escalation",
+            "next_check_due_minutes": 0,
+        }
+
+        with self._lock:
+            record.state.esi_floor = esi
+            record.state.last_check_minute = minute
+            record.events.append(event)
+
+        log.info("manual override %s: ESI %s -> %s by %s (%s)",
+                 patient_id, previous, esi, by, reason)
         return event
 
     def sweep(self) -> list[dict]:

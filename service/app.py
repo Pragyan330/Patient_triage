@@ -35,6 +35,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 from grounding_module import ground
 from grounding_module import news2
 from service.feed import as_demo_patient
+from service import surge
 from service.gate import apply_floor, as_grounded, run_gate
 from service.ports import CORS_ORIGINS, GROUNDED_ENDPOINT, GROUNDING_PORT
 from service.store import registry
@@ -84,15 +85,54 @@ def receive_initial(initial: dict = Body(...)) -> dict:
     # Deterministic screen first. It reads structured fields and returns in
     # microseconds, so a pulseless patient is never held behind a 15s retrieval.
     gate = run_gate(initial)
+    surge.monitor.record_arrival()
 
     try:
         if gate.get("bypasses_pipeline"):
             grounded = as_grounded(initial, gate, news2.from_schema(initial).as_dict())
+        elif surge.monitor.should_degrade(gate.get("esi") or initial.get("implied_esi")):
+            # Ration retrieval by acuity, never by arrival order. See surge.py.
+            scored = news2.from_schema(initial).as_dict()
+            esi = gate.get("esi") or initial.get("implied_esi") or 4
+            grounded = apply_floor(surge.as_degraded(initial, scored, esi, gate), gate)
+            log.info("surge: %s triaged without retrieval at ESI %s",
+                     initial.get("patient_id"), esi)
         else:
             grounded = apply_floor(ground(initial), gate)
     except Exception as exc:
-        log.exception("grounding failed")
-        raise HTTPException(500, f"Grounding failed: {type(exc).__name__}: {exc}")
+        # A patient must never fall out of the queue because retrieval failed.
+        # Returning 500 here meant the intake server logged a warning and the
+        # patient simply did not exist - the worst outcome the system can
+        # produce, worse than any mis-triage, and it happened six times in the
+        # first surge run when Mistral rate-limited us.
+        #
+        # Fail safe instead: admit them on the deterministic score alone, at
+        # the more urgent of the gate's level and their provisional one, and
+        # say plainly that the assessment is incomplete.
+        log.exception("grounding failed for %s - admitting on rules alone",
+                      initial.get("patient_id"))
+        scored = news2.from_schema(initial).as_dict()
+        fallback_esi = min(
+            [e for e in (gate.get("esi"), initial.get("implied_esi")) if e] or [2])
+        grounded = apply_floor(
+            surge.as_degraded(initial, scored, fallback_esi, gate), gate)
+        grounded["degraded_reason"] = "grounding_unavailable"
+        grounded["confidence"] = {
+            "level": "low",
+            "score": 0.3,
+            "red_flag_rule": gate.get("matched_rule_id"),
+            "reasons": [
+                f"Protocol retrieval failed ({type(exc).__name__}), so this level "
+                f"rests only on the red-flag rules and the NEWS2 score.",
+                "Admitted at the more urgent available level rather than dropped: "
+                "a patient missing from the queue is worse than one over-triaged.",
+                "Needs a full assessment when capacity allows.",
+            ],
+            "escalated_for_uncertainty": False,
+        }
+        grounded["concerns"][0]["nurse_summary"] = (
+            f"ESI {fallback_esi} from rules and NEWS2 only - protocol retrieval was "
+            f"unavailable. No citation behind this. Reassess when you can.")
 
     record = registry.admit(grounded, initial=initial)
     elapsed = int((time.perf_counter() - started) * 1000)
@@ -120,6 +160,20 @@ def receive_initial(initial: dict = Body(...)) -> dict:
             "low_confidence": bool(gate.get("low_confidence")),
         },
     }
+
+
+@app.get("/api/surge")
+def surge_status() -> dict:
+    """Whether the department is surging, and what that changes."""
+    return surge.monitor.status()
+
+
+@app.post("/api/surge")
+def set_surge(body: dict = Body(...)) -> dict:
+    """Force surge mode on or off for a demo. null returns to measuring."""
+    surge.monitor.forced = body.get("forced")
+    log.info("surge mode forced=%s", surge.monitor.forced)
+    return surge.monitor.status()
 
 
 @app.get("/api/patients.json")
@@ -187,6 +241,43 @@ def new_vitals(patient_id: str, vitals: dict = Body(...)) -> dict:
         "retrieval_ms": 0,
         "event": event,
     }
+
+
+@app.post("/api/patients/{patient_id}/override")
+def override(patient_id: str, body: dict = Body(...)) -> dict:
+    """A nurse setting the ESI by hand — the only path allowed to de-escalate.
+
+    The automatic loop is an escalate-only ratchet on purpose. This sits
+    outside it, records who decided and why, and flags a de-escalation for
+    review so it is visible to whoever looks at the queue next.
+    """
+    if registry.get(patient_id) is None:
+        raise HTTPException(404, f"No patient {patient_id}")
+
+    esi = body.get("esi")
+    if esi is None:
+        raise HTTPException(422, "esi is required (1-5)")
+
+    reason = (body.get("reason") or "").strip()
+    try:
+        target = int(esi)
+    except (TypeError, ValueError):
+        raise HTTPException(422, f"esi must be a number, got {esi!r}")
+
+    # De-escalation moves a patient further down the queue. That is the one
+    # direction that can harm by omission, so it does not happen unexplained.
+    current = registry.get(patient_id).state.esi_floor
+    if target > current and not reason:
+        raise HTTPException(
+            422, "A reason is required to de-escalate: this moves the patient "
+                 "further down the queue.")
+
+    try:
+        event = registry.override_esi(patient_id, target, reason=reason,
+                                      by=(body.get("by") or "nurse").strip())
+    except ValueError as exc:
+        raise HTTPException(422, str(exc))
+    return event
 
 
 @app.post("/api/sweep")

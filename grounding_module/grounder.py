@@ -17,11 +17,12 @@ from __future__ import annotations
 import json
 import logging
 import re
+import threading
 import time
 import unicodedata
 from dataclasses import dataclass
 
-from . import news2
+from . import confidence, news2
 from .config import Config, load_dotenv_if_present
 from .retrieve import LocalRetriever
 from .schema import Grounded
@@ -206,6 +207,9 @@ class Grounder:
         self.llm = Mistral(api_key=key)
         self.retrieval_ms = 0
         self.last_blocks: list[EvidenceBlock] = []
+        # Shared across threads: FastAPI serves requests concurrently, so the
+        # cap has to live on the Grounder rather than on a single call.
+        self._llm_slots = threading.Semaphore(self.config.max_concurrent_llm)
 
     @property
     def model(self) -> str:
@@ -300,15 +304,25 @@ class Grounder:
             "total_ms": int((time.perf_counter() - wall) * 1000),
             **audit,
         }
-        return out
+
+        # No score leaves this module without a stated confidence, and a low
+        # one escalates rather than just being reported. See confidence.py.
+        return confidence.apply_to(
+            out, confidence.assess(initial, out, out["news2"]))
 
     def _parse_with_retry(self, **kwargs):
-        """Mistral 429s readily on a low tier; back off rather than lose the run."""
+        """Mistral 429s readily on a low tier; back off rather than lose the run.
+
+        The semaphore matters as much as the retry. Retrying a request that
+        should never have been sent concurrently just spreads the same 429
+        over a longer window; capping in-flight calls avoids provoking it.
+        """
         tries = self.config.max_retries
         delay = self.config.initial_backoff_seconds
         for attempt in range(1, tries + 1):
             try:
-                return self.llm.chat.parse(**kwargs)
+                with self._llm_slots:
+                    return self.llm.chat.parse(**kwargs)
             except Exception as exc:
                 retryable = "429" in str(exc) or "rate limit" in str(exc).lower()
                 if not retryable or attempt == tries:
