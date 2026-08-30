@@ -99,6 +99,47 @@ class Service:
             self.proc.terminate()
 
 
+def port_owner(port: int) -> str | None:
+    """Return a description of whatever is already listening on `port`.
+
+    Checked up front because the failure is otherwise unreadable: uvicorn dies
+    with WinError 10048, the launcher reports "exited with code 3", and Vite
+    quietly drifts to 5175 while the intake form still redirects to 5173. The
+    usual cause is simply an earlier run that was never stopped.
+    """
+    import socket
+    with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as probe:
+        probe.settimeout(0.4)
+        if probe.connect_ex(("127.0.0.1", port)) != 0:
+            return None
+
+    try:                                     # name the process if we can
+        out = subprocess.run(["netstat", "-ano"], capture_output=True, text=True,
+                             timeout=8).stdout
+        for line in out.splitlines():
+            if f":{port} " in line and "LISTENING" in line:
+                pid = line.split()[-1]
+                name = subprocess.run(
+                    ["tasklist", "/FI", f"PID eq {pid}", "/NH"],
+                    capture_output=True, text=True, timeout=8).stdout.split()
+                return f"PID {pid}" + (f" ({name[0]})" if name else "")
+    except Exception:
+        pass
+    return "another process"
+
+
+def check_ports(services: list[Service]) -> list[Service]:
+    """Refuse to start a service whose port is taken, and say what has it."""
+    free = []
+    for s in services:
+        owner = port_owner(s.port)
+        if owner:
+            print(f"  {DIM}skip  {s.name:10s} :{s.port} already in use by {owner}{OFF}")
+        else:
+            free.append(s)
+    return free
+
+
 def wait_until_up(url: str, timeout: float = 45.0) -> bool:
     """Poll a URL until it answers. Opening a tab before the server is
     listening just shows the browser's own error page."""
@@ -164,7 +205,10 @@ def build(names: set[str]) -> list[Service]:
         ),
         Service(
             "queue-ui",
-            ["npm", "run", "dev", "--", "--port", str(QUEUE_UI_PORT)],
+            # --strictPort because Vite otherwise falls forward to the next
+            # free port, leaving the UI on 5175 while the intake form still
+            # redirects to 5173. Failing loudly beats moving silently.
+            ["npm", "run", "dev", "--", "--port", str(QUEUE_UI_PORT), "--strictPort"],
             ROOT / "retriage-demo", QUEUE_UI_PORT,
             needs=ROOT / "retriage-demo" / "node_modules",
         ),
@@ -195,6 +239,11 @@ def main() -> None:
                  f"Choose from: grounding, intake, queue-ui")
 
     print("\n\033[1mpatient triage - all local\033[0m")
+    services = check_ports(services)
+    if not services:
+        sys.exit("\nEvery port is already in use. An earlier run is probably still "
+                 "going - stop it, or close the terminal it is in, and try again.")
+
     started = [s for s in services if s.start()]
     if not started:
         sys.exit("\nNothing started. Run `npm install` for the Node services.")
