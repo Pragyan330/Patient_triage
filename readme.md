@@ -168,3 +168,16 @@ Last full run: 6/6 cases clean, 28/28 citations verbatim on the page they cite,
 | `scripts/fetch_corpus.py` | downloads the protocol PDFs |
 | `corpus/` | the PDFs (gitignored) |
 | `sim/` | local debug tools — runner, REPL, viewer, tests (gitignored) |
+
+---
+
+## Other Modules
+
+### Intake Service (`app.js` & `views/`)
+An Express server running on port 8080 that provides the initial patient intake form. It collects the raw patient presentation data and uses the Mistral LLM to transform that unstructured input into the strict `schema_initial_example.json` shape required by the grounding module. 
+
+### Nurse Queue UI (`retriage-demo/`)
+A Vite + React frontend running on port 5173. This is the live dashboard used by triage nurses. It polls the backend for patient updates, displays the grounded ESI scores, and manages active countdown timers indicating exactly when a patient's next vital check is due.
+
+### Red-Flag Gate (`red_flag_gate.py`)
+A pure, deterministic clinical rule evaluator running before the main LLM retrieval pipeline. It evaluates the structured patient data against a strict set of 16 hardcoded clinical rules (sourced from ESI v4 and NEWS2). If a patient matches an immediately life-threatening condition (ESI 1 or ESI 2), they bypass the slower retrieval pipeline entirely for immediate escalation.
