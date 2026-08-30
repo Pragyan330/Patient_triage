@@ -1,0 +1,51 @@
+{
+  "patient_id": "P-305",
+  "age": 81,
+  "avpu": "alert",
+  "pulse_present": true,
+  "breathing": true,
+  "mechanism_flags": [],
+  "concern": "Breathless and tired for two days, no chest pain at all",
+  "what_keeps_it_open": "Diabetic for thirty years. No pain anywhere. Breathless climbing stairs, which is new for her. Looks grey. Long-standing neuropathy means she may not feel cardiac pain the way another patient would.",
+  "age_sex_note": "81, female. Type 2 diabetes.",
+  "medication_effect": "Metformin and bisoprolol; the beta-blocker will blunt any compensatory tachycardia.",
+  "allergy_note": "None known.",
+  "vitals_read": {
+    "heart_rate": 58,
+    "respiratory_rate": 24,
+    "systolic_bp": 98,
+    "spo2": 94,
+    "temperature_c": 36.2,
+    "not_measured": [
+      "pain_score"
+    ]
+  },
+  "lookups": [
+    {
+      "intent": "escalation_trigger",
+      "question": "Does a patient with cardiac risk factors and no chest pain still meet a high-risk criterion?",
+      "presentation_terms": [
+        "high risk situation",
+        "cardiac",
+        "chest pain"
+      ],
+      "prefer_document": "esi",
+      "answer_shape": "criterion",
+      "priority": 1
+    },
+    {
+      "intent": "escalation_trigger",
+      "question": "What aggregate score triggers clinical escalation and an emergency response?",
+      "presentation_terms": [
+        "aggregate score",
+        "escalation",
+        "threshold"
+      ],
+      "prefer_document": "news2",
+      "answer_shape": "numeric_threshold",
+      "priority": 1
+    }
+  ],
+  "implied_esi": 3,
+  "implied_esi_reasoning": "Breathless, no pain, atypical. Provisional."
+}

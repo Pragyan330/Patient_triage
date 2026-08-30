@@ -1,0 +1,48 @@
+{
+  "patient_id": "P-310",
+  "age": 45,
+  "avpu": "alert",
+  "pulse_present": true,
+  "breathing": true,
+  "mechanism_flags": [],
+  "concern": "Cannot describe the problem - no shared language and no interpreter yet",
+  "what_keeps_it_open": "Points to her abdomen and grimaces. No accompanying family. Nothing further can be established at triage.",
+  "has_prior_record": false,
+  "vitals_read": {
+    "heart_rate": 108,
+    "respiratory_rate": 20,
+    "systolic_bp": 110,
+    "spo2": 97,
+    "temperature_c": 37.8,
+    "not_measured": [
+      "pain_score"
+    ]
+  },
+  "lookups": [
+    {
+      "intent": "escalation_trigger",
+      "question": "How should a patient be triaged when the history cannot be obtained at all?",
+      "presentation_terms": [
+        "unable to obtain history",
+        "high risk situation"
+      ],
+      "prefer_document": "esi",
+      "answer_shape": "criterion",
+      "priority": 1
+    },
+    {
+      "intent": "escalation_trigger",
+      "question": "What aggregate score triggers clinical escalation and an emergency response?",
+      "presentation_terms": [
+        "aggregate score",
+        "escalation",
+        "threshold"
+      ],
+      "prefer_document": "news2",
+      "answer_shape": "numeric_threshold",
+      "priority": 1
+    }
+  ],
+  "implied_esi": 3,
+  "implied_esi_reasoning": "History unobtainable. Provisional."
+}

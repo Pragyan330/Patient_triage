@@ -1,0 +1,49 @@
+{
+  "patient_id": "P-304",
+  "age": 7,
+  "avpu": "alert",
+  "pulse_present": true,
+  "breathing": true,
+  "mechanism_flags": [],
+  "concern": "Boy brought in by a neighbour after falling from a climbing frame",
+  "what_keeps_it_open": "Landed on his arm. Crying but consolable, walking, no head injury reported. The neighbour does not know his medical history and the parents cannot be contacted.",
+  "has_prior_record": false,
+  "age_sex_note": "7 years old, male.",
+  "vitals_read": {
+    "heart_rate": 112,
+    "respiratory_rate": 24,
+    "systolic_bp": 104,
+    "spo2": 99,
+    "temperature_c": 36.9,
+    "pain_score": 7,
+    "not_measured": []
+  },
+  "lookups": [
+    {
+      "intent": "escalation_trigger",
+      "question": "How are paediatric vital signs assessed against age-appropriate danger-zone ranges?",
+      "presentation_terms": [
+        "pediatric",
+        "danger zone vitals",
+        "age"
+      ],
+      "prefer_document": "esi",
+      "answer_shape": "criterion",
+      "priority": 1
+    },
+    {
+      "intent": "escalation_trigger",
+      "question": "What aggregate score triggers clinical escalation and an emergency response?",
+      "presentation_terms": [
+        "aggregate score",
+        "escalation",
+        "threshold"
+      ],
+      "prefer_document": "news2",
+      "answer_shape": "numeric_threshold",
+      "priority": 1
+    }
+  ],
+  "implied_esi": 4,
+  "implied_esi_reasoning": "Isolated limb injury, otherwise well. Provisional."
+}

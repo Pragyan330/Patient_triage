@@ -21,9 +21,12 @@ Or this one alone:
 """
 from __future__ import annotations
 
+import json
 import logging
 import sys
+import threading
 import time
+from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 
 from fastapi import Body, FastAPI, HTTPException
@@ -159,6 +162,62 @@ def receive_initial(initial: dict = Body(...)) -> dict:
             "missing_fields": gate.get("missing_fields") or [],
             "low_confidence": bool(gate.get("low_confidence")),
         },
+    }
+
+
+DEMO_PATIENTS = Path(__file__).resolve().parent.parent / "demo_patients"
+
+
+@app.post("/api/demo/seed")
+def seed_demo(body: dict = Body(default={})) -> dict:
+    """Admit the whole demo cohort, in the background.
+
+    The queue fills progressively rather than after a two-minute pause, which
+    is both a better demo and an honest one: you watch the fast paths land
+    first - red-flag bypasses in milliseconds, surge-rationed low acuity right
+    behind - while the ESI 1-3 patients take their full retrieval.
+
+    Already-admitted patients are skipped, so pressing it twice is harmless.
+    """
+    if not DEMO_PATIENTS.exists():
+        raise HTTPException(404, f"No demo_patients directory at {DEMO_PATIENTS}")
+
+    records = sorted(DEMO_PATIENTS.glob("*.json"))
+    known = {r.patient_id for r in registry.all()}
+    known |= {r.source_patient_id for r in registry.all() if r.source_patient_id}
+
+    todo = []
+    for path in records:
+        try:
+            payload = json.loads(path.read_text(encoding="utf-8"))
+        except Exception:
+            continue
+        if payload.get("patient_id") in known:
+            continue
+        todo.append((path.stem, payload))
+
+    def admit_one(item: tuple[str, dict]) -> None:
+        name, payload = item
+        try:
+            receive_initial(payload)
+        except Exception:
+            log.exception("demo seed failed for %s", name)
+
+    def load() -> None:
+        # Seeded in parallel so the queue visibly fills instead of trickling.
+        # Safe to fan out: the LLM semaphore in the grounder caps how many
+        # model calls are actually in flight, so this only overlaps the
+        # retrieval and the fast paths, which is exactly what should overlap.
+        with ThreadPoolExecutor(max_workers=6) as pool:
+            list(pool.map(admit_one, todo))
+        log.info("demo seed complete: %d patients", len(todo))
+
+    threading.Thread(target=load, daemon=True).start()
+    log.info("seeding %d demo patients in the background", len(todo))
+    return {
+        "seeding": len(todo),
+        "already_present": len(records) - len(todo),
+        "note": "Admitted in the background; poll /api/queue to watch it fill.",
     }
 
 

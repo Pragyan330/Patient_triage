@@ -1,0 +1,43 @@
+{
+  "patient_id": "P-205",
+  "concern": "Found unresponsive and barely breathing",
+  "what_keeps_it_open": "Brought in by ambulance, unresponsive to pain, breathing slow and shallow, pinpoint pupils. Bag-valve-mask ventilation in progress.",
+  "arrival_mode_note": "Blue-light ambulance, pre-alert called.",
+  "vitals_read": {
+    "heart_rate": 48,
+    "respiratory_rate": 6,
+    "systolic_bp": 88,
+    "spo2": 82,
+    "temperature_c": 35.4,
+    "not_measured": [
+      "pain_score"
+    ]
+  },
+  "lookups": [
+    {
+      "intent": "escalation_trigger",
+      "question": "Which patients require immediate life-saving intervention and therefore the highest acuity level?",
+      "presentation_terms": [
+        "immediate life-saving intervention",
+        "level 1",
+        "unresponsive"
+      ],
+      "prefer_document": "esi",
+      "answer_shape": "criterion",
+      "priority": 1
+    },
+    {
+      "intent": "escalation_trigger",
+      "question": "What aggregate score requires an emergency clinical response?",
+      "presentation_terms": [
+        "aggregate score",
+        "emergency response"
+      ],
+      "prefer_document": "news2",
+      "answer_shape": "numeric_threshold",
+      "priority": 2
+    }
+  ],
+  "implied_esi": 2,
+  "implied_esi_reasoning": "Ambulance arrival, very abnormal observations. Provisional."
+}

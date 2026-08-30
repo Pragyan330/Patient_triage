@@ -1,0 +1,42 @@
+{
+  "patient_id": "P-203",
+  "concern": "Chest pain that has now settled",
+  "what_keeps_it_open": "Central crushing chest pain for 40 minutes while gardening, radiating to the left arm, with sweating. Fully resolved on arrival, 20 minutes ago. Currently pain free and looks well.",
+  "age_sex_note": "58, male. Smoker. Father had a heart attack at 60.",
+  "vitals_read": {
+    "heart_rate": 76,
+    "respiratory_rate": 16,
+    "systolic_bp": 132,
+    "spo2": 98,
+    "temperature_c": 36.7,
+    "not_measured": [
+      "pain_score"
+    ]
+  },
+  "lookups": [
+    {
+      "intent": "escalation_trigger",
+      "question": "Does a high-risk presentation with currently normal vital signs still warrant a high acuity level?",
+      "presentation_terms": [
+        "high risk situation",
+        "normal vital signs",
+        "chest pain"
+      ],
+      "prefer_document": "esi",
+      "answer_shape": "criterion",
+      "priority": 1
+    },
+    {
+      "intent": "escalation_trigger",
+      "question": "What aggregate score triggers clinical escalation?",
+      "presentation_terms": [
+        "aggregate score"
+      ],
+      "prefer_document": "news2",
+      "answer_shape": "numeric_threshold",
+      "priority": 2
+    }
+  ],
+  "implied_esi": 3,
+  "implied_esi_reasoning": "Currently well with normal observations. Provisional."
+}

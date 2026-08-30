@@ -1,0 +1,38 @@
+{
+  "patient_id": "P-311",
+  "age": 29,
+  "avpu": "alert",
+  "pulse_present": true,
+  "breathing": true,
+  "mechanism_flags": [],
+  "concern": "Cut a finger on a kitchen knife",
+  "what_keeps_it_open": "Bleeding stopped with pressure. Clean edges, about two centimetres, tetanus up to date. Otherwise entirely well.",
+  "age_sex_note": "29, male.",
+  "medication_effect": "None.",
+  "allergy_note": "None known.",
+  "vitals_read": {
+    "heart_rate": 72,
+    "respiratory_rate": 14,
+    "systolic_bp": 122,
+    "spo2": 99,
+    "temperature_c": 36.6,
+    "pain_score": 3,
+    "not_measured": []
+  },
+  "lookups": [
+    {
+      "intent": "escalation_trigger",
+      "question": "How many resources does an uncomplicated laceration need, and which acuity level does that indicate?",
+      "presentation_terms": [
+        "resources",
+        "laceration",
+        "level 4"
+      ],
+      "prefer_document": "esi",
+      "answer_shape": "criterion",
+      "priority": 1
+    }
+  ],
+  "implied_esi": 4,
+  "implied_esi_reasoning": "Minor injury, one resource. Provisional."
+}

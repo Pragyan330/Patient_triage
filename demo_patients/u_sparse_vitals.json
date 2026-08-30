@@ -1,0 +1,49 @@
+{
+  "patient_id": "P-316",
+  "age": 55,
+  "avpu": "alert",
+  "pulse_present": true,
+  "breathing": true,
+  "mechanism_flags": [],
+  "concern": "Headache for three days, worse today",
+  "what_keeps_it_open": "Triage was interrupted and only a pulse and temperature were recorded before the nurse was called away. No blood pressure, no saturations, no respiratory rate.",
+  "has_prior_record": false,
+  "vitals_read": {
+    "heart_rate": 90,
+    "temperature_c": 37.4,
+    "not_measured": [
+      "respiratory_rate",
+      "systolic_bp",
+      "spo2",
+      "pain_score"
+    ]
+  },
+  "lookups": [
+    {
+      "intent": "escalation_trigger",
+      "question": "How should a patient be triaged when the vital signs are incomplete?",
+      "presentation_terms": [
+        "vital signs",
+        "level 2",
+        "incomplete"
+      ],
+      "prefer_document": "esi",
+      "answer_shape": "criterion",
+      "priority": 1
+    },
+    {
+      "intent": "escalation_trigger",
+      "question": "What aggregate score triggers clinical escalation and an emergency response?",
+      "presentation_terms": [
+        "aggregate score",
+        "escalation",
+        "threshold"
+      ],
+      "prefer_document": "news2",
+      "answer_shape": "numeric_threshold",
+      "priority": 1
+    }
+  ],
+  "implied_esi": 3,
+  "implied_esi_reasoning": "Incomplete observations. Provisional."
+}

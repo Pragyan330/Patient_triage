@@ -1,0 +1,52 @@
+{
+  "patient_id": "P-314",
+  "age": 23,
+  "avpu": "voice",
+  "pulse_present": true,
+  "breathing": true,
+  "mechanism_flags": [
+    "airway_swelling"
+  ],
+  "concern": "Sudden facial swelling and difficulty breathing after eating",
+  "what_keeps_it_open": "Ate a biscuit containing nuts twenty minutes ago. Lips and tongue swelling, hoarse voice, widespread rash. Known nut allergy, carries an adrenaline pen but has not used it.",
+  "age_sex_note": "23, female.",
+  "allergy_note": "Severe nut allergy.",
+  "vitals_read": {
+    "heart_rate": 128,
+    "respiratory_rate": 30,
+    "systolic_bp": 88,
+    "spo2": 90,
+    "temperature_c": 36.9,
+    "not_measured": [
+      "pain_score"
+    ]
+  },
+  "lookups": [
+    {
+      "intent": "escalation_trigger",
+      "question": "Which patients require immediate life-saving intervention for airway compromise?",
+      "presentation_terms": [
+        "airway",
+        "immediate life-saving intervention",
+        "level 1"
+      ],
+      "prefer_document": "esi",
+      "answer_shape": "criterion",
+      "priority": 1
+    },
+    {
+      "intent": "escalation_trigger",
+      "question": "What aggregate score triggers clinical escalation and an emergency response?",
+      "presentation_terms": [
+        "aggregate score",
+        "escalation",
+        "threshold"
+      ],
+      "prefer_document": "news2",
+      "answer_shape": "numeric_threshold",
+      "priority": 1
+    }
+  ],
+  "implied_esi": 1,
+  "implied_esi_reasoning": "Airway compromise. Provisional."
+}

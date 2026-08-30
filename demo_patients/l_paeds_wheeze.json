@@ -1,0 +1,50 @@
+{
+  "patient_id": "P-307",
+  "age": 4,
+  "avpu": "alert",
+  "pulse_present": true,
+  "breathing": true,
+  "mechanism_flags": [],
+  "concern": "Four-year-old wheezing and working hard to breathe",
+  "what_keeps_it_open": "Known asthma. Blue inhaler used twice with little effect. Speaking in short phrases only. Visible chest recessions.",
+  "age_sex_note": "4 years old, male.",
+  "medication_effect": "Salbutamol inhaler.",
+  "vitals_read": {
+    "heart_rate": 148,
+    "respiratory_rate": 38,
+    "systolic_bp": 96,
+    "spo2": 92,
+    "temperature_c": 37.1,
+    "not_measured": [
+      "pain_score"
+    ]
+  },
+  "lookups": [
+    {
+      "intent": "escalation_trigger",
+      "question": "How are paediatric respiratory rate and oxygen saturation assessed for danger-zone vitals?",
+      "presentation_terms": [
+        "pediatric",
+        "danger zone vitals",
+        "respiratory"
+      ],
+      "prefer_document": "esi",
+      "answer_shape": "criterion",
+      "priority": 1
+    },
+    {
+      "intent": "escalation_trigger",
+      "question": "What aggregate score triggers clinical escalation and an emergency response?",
+      "presentation_terms": [
+        "aggregate score",
+        "escalation",
+        "threshold"
+      ],
+      "prefer_document": "news2",
+      "answer_shape": "numeric_threshold",
+      "priority": 1
+    }
+  ],
+  "implied_esi": 2,
+  "implied_esi_reasoning": "Paediatric respiratory distress. Provisional."
+}

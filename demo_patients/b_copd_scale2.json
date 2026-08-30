@@ -1,0 +1,45 @@
+{
+  "patient_id": "P-202",
+  "concern": "Worsening breathlessness in someone with long-standing lung disease",
+  "what_keeps_it_open": "Known COPD with documented hypercapnic respiratory failure on a previous admission. Currently on 2 L/min via nasal cannula, which is her usual home oxygen.",
+  "medication_effect": "On home oxygen. Target saturation range is prescribed as 88-92%.",
+  "age_sex_note": "71, female. Alert and orientated, speaking in full sentences.",
+  "vitals_read": {
+    "heart_rate": 84,
+    "respiratory_rate": 19,
+    "systolic_bp": 128,
+    "spo2": 89,
+    "temperature_c": 36.9,
+    "not_measured": [
+      "pain_score"
+    ]
+  },
+  "lookups": [
+    {
+      "intent": "escalation_trigger",
+      "question": "Which oxygen saturation scale applies to a patient with confirmed hypercapnic respiratory failure, and how are saturations scored on it?",
+      "presentation_terms": [
+        "SpO2 Scale 2",
+        "hypercapnic respiratory failure",
+        "COPD",
+        "target range 88-92"
+      ],
+      "prefer_document": "news2",
+      "answer_shape": "numeric_threshold",
+      "priority": 1
+    },
+    {
+      "intent": "escalation_trigger",
+      "question": "How many points are added for a patient receiving supplemental oxygen?",
+      "presentation_terms": [
+        "supplemental oxygen",
+        "weighting score"
+      ],
+      "prefer_document": "news2",
+      "answer_shape": "numeric_threshold",
+      "priority": 2
+    }
+  ],
+  "implied_esi": 3,
+  "implied_esi_reasoning": "Breathless, saturations look low on the usual scale. Provisional."
+}

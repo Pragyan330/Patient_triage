@@ -1,0 +1,33 @@
+{
+  "patient_id": "P-204",
+  "concern": "A sore throat for three days",
+  "what_keeps_it_open": "Mild sore throat, no difficulty swallowing, no drooling, no voice change, no neck swelling. Eating and drinking normally.",
+  "age_sex_note": "24, male. Walked in, no distress.",
+  "vitals_read": {
+    "heart_rate": 72,
+    "respiratory_rate": 14,
+    "systolic_bp": 118,
+    "spo2": 99,
+    "temperature_c": 37.1,
+    "not_measured": [
+      "pain_score"
+    ]
+  },
+  "lookups": [
+    {
+      "intent": "escalation_trigger",
+      "question": "How many resources is a patient with an uncomplicated minor complaint expected to need, and which acuity level does that indicate?",
+      "presentation_terms": [
+        "resources",
+        "minor complaint",
+        "level 4",
+        "level 5"
+      ],
+      "prefer_document": "esi",
+      "answer_shape": "criterion",
+      "priority": 1
+    }
+  ],
+  "implied_esi": 4,
+  "implied_esi_reasoning": "Minor complaint, normal observations. Provisional."
+}

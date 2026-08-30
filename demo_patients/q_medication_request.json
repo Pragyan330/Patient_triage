@@ -1,0 +1,37 @@
+{
+  "patient_id": "P-312",
+  "age": 38,
+  "avpu": "alert",
+  "pulse_present": true,
+  "breathing": true,
+  "mechanism_flags": [],
+  "concern": "Ran out of her regular blood pressure tablets",
+  "what_keeps_it_open": "Feels completely well. No symptoms of any kind. Wants a prescription. Walked in.",
+  "age_sex_note": "38, female.",
+  "medication_effect": "Ramipril.",
+  "allergy_note": "None known.",
+  "vitals_read": {
+    "heart_rate": 74,
+    "respiratory_rate": 14,
+    "systolic_bp": 132,
+    "spo2": 99,
+    "temperature_c": 36.7,
+    "pain_score": 0,
+    "not_measured": []
+  },
+  "lookups": [
+    {
+      "intent": "escalation_trigger",
+      "question": "Which patients require no resources and are therefore the lowest acuity level?",
+      "presentation_terms": [
+        "no resources",
+        "level 5"
+      ],
+      "prefer_document": "esi",
+      "answer_shape": "criterion",
+      "priority": 1
+    }
+  ],
+  "implied_esi": 5,
+  "implied_esi_reasoning": "No acute complaint. Provisional."
+}

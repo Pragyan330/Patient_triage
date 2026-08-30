@@ -1,0 +1,48 @@
+{
+  "patient_id": "P-303",
+  "age": null,
+  "avpu": "voice",
+  "pulse_present": true,
+  "breathing": true,
+  "mechanism_flags": [],
+  "concern": "Found on the street, brought in by a passer-by, no identification",
+  "what_keeps_it_open": "Rousable to voice but not answering questions. No wallet, no phone, no name. Nothing is known about him: no history, no medication list, no allergies, no next of kin.",
+  "has_prior_record": false,
+  "vitals_read": {
+    "heart_rate": 104,
+    "respiratory_rate": 22,
+    "systolic_bp": 102,
+    "spo2": 93,
+    "temperature_c": 35.8,
+    "not_measured": [
+      "pain_score"
+    ]
+  },
+  "lookups": [
+    {
+      "intent": "escalation_trigger",
+      "question": "How should a patient with no available history and altered mental status be triaged?",
+      "presentation_terms": [
+        "altered mental status",
+        "high risk situation"
+      ],
+      "prefer_document": "esi",
+      "answer_shape": "criterion",
+      "priority": 1
+    },
+    {
+      "intent": "escalation_trigger",
+      "question": "What aggregate score triggers clinical escalation and an emergency response?",
+      "presentation_terms": [
+        "aggregate score",
+        "escalation",
+        "threshold"
+      ],
+      "prefer_document": "news2",
+      "answer_shape": "numeric_threshold",
+      "priority": 1
+    }
+  ],
+  "implied_esi": 2,
+  "implied_esi_reasoning": "Unknown patient, altered mental status. Provisional."
+}

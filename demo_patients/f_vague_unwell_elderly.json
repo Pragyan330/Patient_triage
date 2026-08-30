@@ -1,0 +1,51 @@
+{
+  "patient_id": "P-301",
+  "age": 84,
+  "avpu": "alert",
+  "pulse_present": true,
+  "breathing": true,
+  "mechanism_flags": [],
+  "concern": "Family say she is just not herself today",
+  "what_keeps_it_open": "No fever, no pain, no localising symptom. Ate breakfast. Slightly slower than usual. Nothing on examination. The only abnormality is that the family are worried, and they know her.",
+  "age_sex_note": "84, female. Lives alone.",
+  "medication_effect": "Amlodipine and atorvastatin.",
+  "allergy_note": "Penicillin - rash.",
+  "vitals_read": {
+    "heart_rate": 78,
+    "respiratory_rate": 18,
+    "systolic_bp": 118,
+    "spo2": 96,
+    "temperature_c": 36.5,
+    "not_measured": [
+      "pain_score"
+    ]
+  },
+  "lookups": [
+    {
+      "intent": "escalation_trigger",
+      "question": "Does a vague presentation with normal vital signs still warrant a higher acuity in an elderly patient?",
+      "presentation_terms": [
+        "high risk situation",
+        "elderly",
+        "normal vital signs"
+      ],
+      "prefer_document": "esi",
+      "answer_shape": "criterion",
+      "priority": 1
+    },
+    {
+      "intent": "escalation_trigger",
+      "question": "What aggregate score triggers clinical escalation and an emergency response?",
+      "presentation_terms": [
+        "aggregate score",
+        "escalation",
+        "threshold"
+      ],
+      "prefer_document": "news2",
+      "answer_shape": "numeric_threshold",
+      "priority": 1
+    }
+  ],
+  "implied_esi": 4,
+  "implied_esi_reasoning": "Nothing objective abnormal. Provisional."
+}

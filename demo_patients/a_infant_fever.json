@@ -1,0 +1,44 @@
+{
+  "patient_id": "P-201",
+  "concern": "A three-month-old with a fever and no obvious source",
+  "what_keeps_it_open": "Infant, febrile, feeding less than usual. Alert but fussy. No rash.",
+  "age_sex_note": "3 months old, female. Presented by parents, walked in.",
+  "vitals_read": {
+    "heart_rate": 168,
+    "respiratory_rate": 48,
+    "systolic_bp": 84,
+    "spo2": 97,
+    "temperature_c": 38.6,
+    "not_measured": [
+      "pain_score"
+    ]
+  },
+  "lookups": [
+    {
+      "intent": "escalation_trigger",
+      "question": "How should a febrile infant under three months be triaged, and what acuity level applies?",
+      "presentation_terms": [
+        "infant",
+        "fever",
+        "under 3 months",
+        "pediatric"
+      ],
+      "prefer_document": "esi",
+      "answer_shape": "criterion",
+      "priority": 1
+    },
+    {
+      "intent": "escalation_trigger",
+      "question": "What aggregate score triggers escalation in an adult?",
+      "presentation_terms": [
+        "aggregate score",
+        "escalation"
+      ],
+      "prefer_document": "news2",
+      "answer_shape": "numeric_threshold",
+      "priority": 2
+    }
+  ],
+  "implied_esi": 3,
+  "implied_esi_reasoning": "Febrile infant, alert, vitals raised. Provisional only."
+}

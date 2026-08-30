@@ -1,0 +1,49 @@
+{
+  "patient_id": "P-308",
+  "age": 0.04,
+  "avpu": "alert",
+  "pulse_present": true,
+  "breathing": true,
+  "mechanism_flags": [],
+  "concern": "Two-week-old with a temperature",
+  "what_keeps_it_open": "Feeding less than usual, warm to touch, no rash. First-time parents, anxious. Born at term with no problems.",
+  "age_sex_note": "2 weeks old, female.",
+  "vitals_read": {
+    "heart_rate": 160,
+    "respiratory_rate": 44,
+    "systolic_bp": 72,
+    "spo2": 98,
+    "temperature_c": 38.3,
+    "not_measured": [
+      "pain_score"
+    ]
+  },
+  "lookups": [
+    {
+      "intent": "escalation_trigger",
+      "question": "How should a febrile infant under 28 days old be triaged?",
+      "presentation_terms": [
+        "infant",
+        "fever",
+        "28 days"
+      ],
+      "prefer_document": "esi",
+      "answer_shape": "criterion",
+      "priority": 1
+    },
+    {
+      "intent": "escalation_trigger",
+      "question": "What aggregate score triggers clinical escalation and an emergency response?",
+      "presentation_terms": [
+        "aggregate score",
+        "escalation",
+        "threshold"
+      ],
+      "prefer_document": "news2",
+      "answer_shape": "numeric_threshold",
+      "priority": 1
+    }
+  ],
+  "implied_esi": 2,
+  "implied_esi_reasoning": "Neonatal fever. Provisional."
+}

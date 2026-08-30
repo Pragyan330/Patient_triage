@@ -1,0 +1,51 @@
+{
+  "patient_id": "P-315",
+  "age": 71,
+  "avpu": "alert",
+  "pulse_present": true,
+  "breathing": true,
+  "mechanism_flags": [
+    "uncontrolled_hemorrhage"
+  ],
+  "concern": "Vomiting blood since this morning",
+  "what_keeps_it_open": "Three episodes of frank red vomit. Known alcoholic liver disease. Pale and clammy.",
+  "age_sex_note": "71, male. Alcoholic liver disease.",
+  "vitals_read": {
+    "heart_rate": 122,
+    "respiratory_rate": 24,
+    "systolic_bp": 86,
+    "spo2": 95,
+    "temperature_c": 36.1,
+    "not_measured": [
+      "pain_score"
+    ]
+  },
+  "lookups": [
+    {
+      "intent": "escalation_trigger",
+      "question": "How is uncontrolled bleeding with abnormal vital signs triaged?",
+      "presentation_terms": [
+        "hemorrhage",
+        "bleeding",
+        "high risk situation"
+      ],
+      "prefer_document": "esi",
+      "answer_shape": "criterion",
+      "priority": 1
+    },
+    {
+      "intent": "escalation_trigger",
+      "question": "What aggregate score triggers clinical escalation and an emergency response?",
+      "presentation_terms": [
+        "aggregate score",
+        "escalation",
+        "threshold"
+      ],
+      "prefer_document": "news2",
+      "answer_shape": "numeric_threshold",
+      "priority": 1
+    }
+  ],
+  "implied_esi": 2,
+  "implied_esi_reasoning": "Active GI bleeding with hypotension. Provisional."
+}

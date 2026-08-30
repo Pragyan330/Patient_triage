@@ -1,0 +1,50 @@
+{
+  "patient_id": "P-309",
+  "age": 62,
+  "avpu": "alert",
+  "pulse_present": true,
+  "breathing": true,
+  "mechanism_flags": [],
+  "concern": "Says he is fine; his wife insisted he come in",
+  "what_keeps_it_open": "Rates the pain 2 out of 10 and calls it indigestion. Visibly sweating, grey, and has vomited once. Worked outdoors all his life and says he does not make a fuss.",
+  "age_sex_note": "62, male.",
+  "medication_effect": "None regular.",
+  "allergy_note": "None known.",
+  "vitals_read": {
+    "heart_rate": 96,
+    "respiratory_rate": 20,
+    "systolic_bp": 146,
+    "spo2": 96,
+    "temperature_c": 36.8,
+    "pain_score": 2,
+    "not_measured": []
+  },
+  "lookups": [
+    {
+      "intent": "escalation_trigger",
+      "question": "Should the triage nurse rely on a low self-reported pain score when the presentation suggests otherwise?",
+      "presentation_terms": [
+        "pain",
+        "high risk situation",
+        "chest pain"
+      ],
+      "prefer_document": "esi",
+      "answer_shape": "criterion",
+      "priority": 1
+    },
+    {
+      "intent": "escalation_trigger",
+      "question": "What aggregate score triggers clinical escalation and an emergency response?",
+      "presentation_terms": [
+        "aggregate score",
+        "escalation",
+        "threshold"
+      ],
+      "prefer_document": "news2",
+      "answer_shape": "numeric_threshold",
+      "priority": 1
+    }
+  ],
+  "implied_esi": 3,
+  "implied_esi_reasoning": "Low self-reported pain against a high-risk appearance. Provisional."
+}

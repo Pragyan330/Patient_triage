@@ -1,0 +1,50 @@
+{
+  "patient_id": "P-302",
+  "age": 31,
+  "avpu": "alert",
+  "pulse_present": true,
+  "breathing": true,
+  "mechanism_flags": [],
+  "concern": "Stomach pain coming and going for two days",
+  "what_keeps_it_open": "Central, sometimes right-sided, sometimes not. No vomiting, eating normally, walked in unaided. Last period three weeks ago; denies pregnancy but no test done yet.",
+  "age_sex_note": "31, female.",
+  "medication_effect": "No regular medication.",
+  "allergy_note": "None known.",
+  "vitals_read": {
+    "heart_rate": 92,
+    "respiratory_rate": 16,
+    "systolic_bp": 116,
+    "spo2": 99,
+    "temperature_c": 37.3,
+    "pain_score": 6,
+    "not_measured": []
+  },
+  "lookups": [
+    {
+      "intent": "escalation_trigger",
+      "question": "How is abdominal pain triaged when the source is unclear and the vital signs are normal?",
+      "presentation_terms": [
+        "abdominal pain",
+        "resources",
+        "level 3"
+      ],
+      "prefer_document": "esi",
+      "answer_shape": "criterion",
+      "priority": 1
+    },
+    {
+      "intent": "escalation_trigger",
+      "question": "What aggregate score triggers clinical escalation and an emergency response?",
+      "presentation_terms": [
+        "aggregate score",
+        "escalation",
+        "threshold"
+      ],
+      "prefer_document": "news2",
+      "answer_shape": "numeric_threshold",
+      "priority": 1
+    }
+  ],
+  "implied_esi": 3,
+  "implied_esi_reasoning": "Undifferentiated abdominal pain. Provisional."
+}

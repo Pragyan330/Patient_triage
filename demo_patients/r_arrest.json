@@ -1,0 +1,24 @@
+{
+  "patient_id": "P-313",
+  "age": 59,
+  "avpu": "unresponsive",
+  "pulse_present": false,
+  "breathing": false,
+  "mechanism_flags": [],
+  "concern": "Collapsed in the waiting room",
+  "what_keeps_it_open": "No pulse felt and not breathing. CPR started by staff.",
+  "age_sex_note": "59, male.",
+  "vitals_read": {
+    "heart_rate": 0,
+    "respiratory_rate": 0,
+    "systolic_bp": 0,
+    "temperature_c": 35.0,
+    "not_measured": [
+      "spo2",
+      "pain_score"
+    ]
+  },
+  "lookups": [],
+  "implied_esi": 2,
+  "implied_esi_reasoning": "Provisional only."
+}

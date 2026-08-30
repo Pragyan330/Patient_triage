@@ -17,6 +17,14 @@ interface AuditLogEntry {
   old_esi: number;
   new_esi: number;
   response: PragyanResponse;
+  // A human decision has to be distinguishable from an automatic one at a
+  // glance, and has to carry who and why. An audit trail that records only
+  // that the level changed cannot answer the question anyone will actually
+  // ask afterwards, which is who changed it and on what grounds.
+  manual?: boolean;
+  by?: string;
+  reason?: string;
+  direction?: 'escalation' | 'de-escalation' | 'no change';
 }
 
 const ESI_COLORS: Record<number, string> = {
@@ -61,6 +69,11 @@ function ConfidenceBadge({ patient }: { patient: PatientState }) {
         {c.level === 'high' ? '●' : c.level === 'moderate' ? '◐' : '○'}
       </span>
       {c.level}
+      {c.score != null && (
+        <strong style={{ fontVariantNumeric: 'tabular-nums' }}>
+          {c.score.toFixed(2)}
+        </strong>
+      )}
       {c.escalated_for_uncertainty && (
         <span style={{ color: '#fbbf24' }}>
           &uarr; from {c.esi_before_uncertainty}
@@ -228,6 +241,50 @@ function OverridePanel({ patient, onClose, onDone }: {
           Cancel
         </button>
       </div>
+    </div>
+  );
+}
+
+/**
+ * Load the whole demo cohort in one click.
+ *
+ * The service admits them in the background so the queue fills in front of
+ * you rather than after a two-minute pause. That ordering is worth watching:
+ * red-flag bypasses land in milliseconds, then the surge-rationed low-acuity
+ * patients, and the ESI 1-3 patients arrive last because they are the ones
+ * actually getting a full retrieval.
+ */
+function SeedButton() {
+  const [state, setState] = useState<'idle' | 'loading' | 'done'>('idle');
+  const [note, setNote] = useState('');
+
+  const seed = async () => {
+    setState('loading');
+    try {
+      const res = await fetch(`${API}/api/demo/seed`, { method: 'POST' });
+      const body = await res.json();
+      setNote(`${body.seeding} admitting`
+        + (body.already_present ? ` · ${body.already_present} already here` : ''));
+      // The poll in the queue picks them up as they land; this just stops the
+      // button looking stuck while the slow ones are still grounding.
+      setTimeout(() => setState('done'), 4000);
+    } catch {
+      setNote('service unreachable');
+      setState('idle');
+    }
+  };
+
+  return (
+    <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+      <button onClick={seed} disabled={state === 'loading'}
+        title="Admit the 22 simulated patients in demo_patients/"
+        style={{
+          padding: '4px 12px', borderRadius: '4px', cursor: 'pointer',
+          border: '1px solid #3b475f', background: 'transparent', color: '#8b93a3',
+        }}>
+        {state === 'loading' ? 'loading…' : 'load 22 patients'}
+      </button>
+      {note && <span style={{ fontSize: '0.7em', color: '#6f7684' }}>{note}</span>}
     </div>
   );
 }
@@ -474,6 +531,7 @@ export default function RetriageQueue() {
           </span>
         </h1>
         <div className="clock-controls">
+          <SeedButton />
           <SurgeToggle surge={surge} setSurge={setSurge} />
           <div className="clock">Sim Time: T+{simulationMinute}m</div>
           <div className="speeds">
@@ -574,6 +632,10 @@ export default function RetriageQueue() {
                           patient_id: p.patient_id,
                           old_esi: p.esi,
                           new_esi: esi,
+                          manual: true,
+                          by: event.overridden_by,
+                          reason: event.override_reason,
+                          direction: event.direction,
                           response: {
                             patient_id: p.patient_id,
                             concerns: [{
@@ -647,15 +709,39 @@ export default function RetriageQueue() {
 function AuditLogEntry({ log }: { log: AuditLogEntry }) {
   const [expanded, setExpanded] = useState(false);
   
+  // A de-escalation by hand is the entry a reviewer will come looking for, so
+  // it is the one that must not blend in with the automatic traffic.
+  const deEscalated = log.direction === 'de-escalation';
+  const accent = log.manual ? (deEscalated ? '#f87171' : '#fbbf24') : '#3b475f';
+
   return (
-    <div className="log-entry log-neutral">
+    <div className="log-entry log-neutral" style={{ borderLeft: `3px solid ${accent}` }}>
       <div className="log-summary" onClick={() => setExpanded(!expanded)} style={{ cursor: 'pointer', display: 'flex', justifyContent: 'space-between', padding: '8px' }}>
         <span className="log-time" style={{ color: '#aaa' }}>T+{log.timestamp}m</span>
         <span className="log-id" style={{ fontWeight: 'bold' }}>{log.patient_id}</span>
         <span className="log-trigger">
+          {log.manual && (
+            <span style={{
+              marginRight: '0.4rem', fontSize: '0.75em', padding: '1px 6px',
+              borderRadius: '3px', background: accent, color: '#111', fontWeight: 700,
+            }}>
+              {deEscalated ? 'MANUAL ↓' : 'MANUAL ↑'}
+            </span>
+          )}
           ESI: {log.old_esi} ➔ {log.new_esi}
         </span>
       </div>
+
+      {log.manual && (
+        <div style={{ padding: '0 8px 8px', fontSize: '0.8em', color: '#8b93a3' }}>
+          by <strong style={{ color: '#d7dae0' }}>{log.by || 'unknown'}</strong>
+          {log.reason
+            ? <> &middot; &ldquo;{log.reason}&rdquo;</>
+            : deEscalated
+              ? <span style={{ color: '#f87171' }}> &middot; no reason recorded</span>
+              : <span style={{ color: '#6f7684' }}> &middot; no reason given (not required to escalate)</span>}
+        </div>
+      )}
       {expanded && (
         <div className="log-json" style={{ padding: '8px', backgroundColor: '#1a1a1a', borderTop: '1px solid #333' }}>
           <h4 style={{ color: '#8e44ad', margin: '0 0 8px 0' }}>Endpoint Response</h4>
