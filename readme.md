@@ -3,6 +3,61 @@
 
 ---
 
+## Running the whole system
+
+Everything runs on one machine over loopback. No hosting, no public URLs.
+
+```
+8080  intake      Express      form -> Mistral -> initial schema
+8000  grounding   FastAPI      ground + re-triage + queue feed
+5173  queue UI    Vite         nurse-facing queue
+```
+
+`main` has all three modules and the wiring. A pull is not quite enough,
+though — five things are deliberately **not** in git and have to be created
+once on whichever laptop is running the demo:
+
+```bash
+git clone <repo> && cd Patient_triage
+
+npm install                            # 1. intake server deps
+cd retriage-demo && npm install && cd ..   # 2. queue UI deps
+
+python -m venv .venv                   # 3. python 3.12 (3.14 lacks some wheels)
+.venv/Scripts/python.exe -m pip install -r requirements.txt
+
+python scripts/fetch_corpus.py         # 4. the protocol PDFs
+
+# 5. the Mistral key, in a .env at the repo root or its parent:
+#    mistral_api=<key>
+```
+
+Then:
+
+```bash
+python scripts/run_all.py
+```
+
+That starts all three, waits for each port, and opens the intake form and the
+queue UI. Fill the form; the patient appears in the queue within five seconds.
+`--no-open` skips the browser, `python scripts/run_all.py grounding` runs one
+service alone, Ctrl-C stops everything.
+
+Why those five are not committed: the key must never be in the repo; the
+corpus is third-party clinical PDFs whose provenance you should confirm
+yourself (see `scripts/fetch_corpus.py`); `node_modules` and `.venv` are build
+output.
+
+### Working on your own module
+
+You do not need to run the whole system to work on your part. Your branch
+holds only your own files, which is fine while you are heads-down — but it
+means your module has no one to talk to. When you want the integrated thing,
+`git merge main` into your branch, or just run it from `main` on the one
+machine doing the demo.
+
+---
+
 ## The grounding module (`grounding_module/`)
 
 Takes the initial assessment produced upstream — a reception form turned into a
