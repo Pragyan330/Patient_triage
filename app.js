@@ -52,7 +52,9 @@ ${JSON.stringify(triageSchema, null, 2)}`;
     // Forward to Pragyan's server
     console.log("generatedjson :",generatedJSON);
     
-    const pragyanUrl = process.env.PRAGYAN_SERVER_URL;
+    // Everything runs on localhost; default to the grounding service's port
+    // so a fresh clone works without anyone writing a .env first.
+    const pragyanUrl = process.env.PRAGYAN_SERVER_URL || 'http://127.0.0.1:8000/api/grounded';
     if (pragyanUrl) {
         console.log("Forwarding to Pragyan's Server:", pragyanUrl);
         try {
