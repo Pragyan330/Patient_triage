@@ -27,6 +27,54 @@ const ESI_COLORS: Record<number, string> = {
   5: '#339933', // Green
 };
 
+const CONFIDENCE_COLOUR: Record<string, string> = {
+  high: '#4ade80', moderate: '#fbbf24', low: '#f87171', unknown: '#6f7684',
+};
+
+/**
+ * Sits next to the ESI, because the two belong together.
+ *
+ * An acuity shown on its own reads as a fact. This system is routinely working
+ * from half a history and a couple of vitals, and the nurse needs to see which
+ * of those they are looking at without clicking anything. Hovering gives the
+ * reasons; a level that was raised because we were unsure says so on the face
+ * of the badge, since that is the number they will act on.
+ */
+function ConfidenceBadge({ patient }: { patient: PatientState }) {
+  const c = patient.confidence;
+  if (!c) return null;
+
+  const colour = CONFIDENCE_COLOUR[c.level] ?? '#6f7684';
+  const tooltip = [
+    `Confidence: ${c.level}${c.score != null ? ` (${c.score})` : ''}`,
+    ...(c.reasons ?? []).map(r => `• ${r}`),
+  ].join('\n');
+
+  return (
+    <div title={tooltip} style={{
+      display: 'inline-flex', alignItems: 'center', gap: '0.3rem',
+      fontSize: '0.72em', padding: '2px 8px', borderRadius: '10px',
+      border: `1px solid ${colour}`, color: colour, whiteSpace: 'nowrap',
+      cursor: 'help',
+    }}>
+      <span style={{ fontSize: '1.1em', lineHeight: 1 }}>
+        {c.level === 'high' ? '●' : c.level === 'moderate' ? '◐' : '○'}
+      </span>
+      {c.level}
+      {c.escalated_for_uncertainty && (
+        <span style={{ color: '#fbbf24' }}>
+          &uarr; from {c.esi_before_uncertainty}
+        </span>
+      )}
+      {patient.degraded && (
+        <span title="Triaged without protocol retrieval" style={{ color: '#8b93a3' }}>
+          &middot; no citation
+        </span>
+      )}
+    </div>
+  );
+}
+
 const countEvidence = (p: PatientState) =>
   (p.concerns ?? []).reduce((n, c) => n + (c.evidence?.length ?? 0), 0);
 
@@ -300,7 +348,10 @@ export default function RetriageQueue() {
       esi: p.current_esi_floor ?? p.grounded_esi ?? p.provisional_esi,
       last_check_minute: p.arrival_minute,
       chief_complaint: p.concerns?.[0]?.clinical_shorthand || 'Unknown',
-      concerns: p.concerns as any
+      concerns: p.concerns as any,
+      confidence: p.confidence,
+      degraded: p.degraded,
+      degraded_reason: p.degraded_reason,
     });
 
     let cancelled = false;
@@ -453,6 +504,7 @@ export default function RetriageQueue() {
                     <div className="esi-badge" style={{ backgroundColor: ESI_COLORS[p.esi] }}>
                       ESI {p.esi}
                     </div>
+                    <ConfidenceBadge patient={p} />
                     <div className="complaint">{p.chief_complaint}</div>
                   </div>
                   <div className="card-footer">

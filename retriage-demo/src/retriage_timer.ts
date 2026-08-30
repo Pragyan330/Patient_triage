@@ -25,6 +25,15 @@ export interface PragyanResponse {
   retrieval_ms: number;
 }
 
+export interface Confidence {
+  level: 'high' | 'moderate' | 'low' | 'unknown';
+  score: number | null;
+  reasons: string[];
+  escalated_for_uncertainty: boolean;
+  esi_before_uncertainty?: number;
+  red_flag_rule?: string | null;
+}
+
 export interface PatientState {
   patient_id: string;
   age: number;
@@ -32,6 +41,11 @@ export interface PatientState {
   last_check_minute: number;
   concerns: Concern[];
   chief_complaint: string;
+  // Never optional in practice: an ESI shown without the confidence behind it
+  // reads as fact, which is exactly what this system must not do.
+  confidence?: Confidence;
+  degraded?: boolean;
+  degraded_reason?: string | null;
 }
 
 export const CHECK_THRESHOLDS: Record<number, number> = {

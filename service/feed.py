@@ -85,6 +85,16 @@ def as_demo_patient(record: Record, now_minute: int) -> dict:
         # it started. The UI sorts on the live one.
         "current_esi_floor": record.state.esi_floor,
         "retrieval_ms": grounded.get("retrieval_ms"),
+        # The queue must never show an ESI without the confidence behind it.
+        # A bare number invites a tired nurse to read it as fact; the whole
+        # point of computing this was to put it in front of them.
+        "confidence": grounded.get("confidence") or {
+            "level": "unknown", "score": None,
+            "reasons": ["No confidence was recorded for this assessment."],
+            "escalated_for_uncertainty": False,
+        },
+        "degraded": bool(grounded.get("degraded")),
+        "degraded_reason": grounded.get("degraded_reason"),
         "initial_vitals": _initial_vitals(record),
         "arrival_minute": record.admitted_minute - now_minute,
         "news2_applicable": record.news2_applicable,
