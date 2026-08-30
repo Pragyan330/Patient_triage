@@ -33,6 +33,19 @@ class InitialAssessment(BaseModel):
     concern: Optional[str] = None
     what_keeps_it_open: Optional[str] = None
 
+    # --- v2 structured fields -------------------------------------------
+    # Added upstream for the red-flag gate. Two of them replace the most
+    # fragile thing this module does: age was regexed out of age_sex_note,
+    # and consciousness was keyword-matched from free prose. Both are safety
+    # inputs - age decides whether NEWS2 may be scored at all - so having
+    # them as real fields matters more than the convenience.
+    # Optional throughout: v1 payloads must keep working.
+    age: Optional[float] = None
+    avpu: Optional[str] = None          # A / V / P / U, or C for new confusion
+    pulse_present: Optional[bool] = None
+    breathing: Optional[bool] = None
+    mechanism_flags: list[str] = Field(default_factory=list)
+
     # Prose fields from the intake form. age_sex_note is load-bearing: news2.py
     # parses the patient's age out of it to decide whether NEWS2 applies at
     # all. It reached us only through extra="allow" until now, which made a
