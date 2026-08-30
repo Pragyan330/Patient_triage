@@ -4,9 +4,10 @@ import type {
   VitalsInput, 
   PragyanResponse
 } from './retriage_timer';
-import { 
-  CHECK_THRESHOLDS, 
-  sendVitalsForRetriage 
+import {
+  API,
+  CHECK_THRESHOLDS,
+  sendVitalsForRetriage
 } from './retriage_timer';
 import samplePatients from './sample_patients.json';
 
@@ -28,6 +29,7 @@ const ESI_COLORS: Record<number, string> = {
 
 export default function RetriageQueue() {
   const [patients, setPatients] = useState<PatientState[]>([]);
+  const [live, setLive] = useState(false);   // true when the service answers
   const [logs, setLogs] = useState<AuditLogEntry[]>([]);
   const [simulationMinute, setSimulationMinuteState] = useState(0);
   const simulationMinuteRef = useRef(0);
@@ -59,17 +61,46 @@ export default function RetriageQueue() {
     consciousness: 'A'
   });
 
-  // Load initial patient state
+  // Load patients from the live service, and keep polling so anyone submitting
+  // the intake form appears here without a refresh. Falls back to the bundled
+  // sample file if the service is not running, so the demo still opens.
   useEffect(() => {
-    const initialPatients = samplePatients.map(p => ({
+    const toState = (p: any) => ({
       patient_id: p.patient_id,
-      age: (p as any).profile?.age || 50,
-      esi: p.grounded_esi || p.provisional_esi,
+      age: p.profile?.age ?? 50,
+      esi: p.current_esi_floor ?? p.grounded_esi ?? p.provisional_esi,
       last_check_minute: p.arrival_minute,
-      chief_complaint: p.concerns[0]?.clinical_shorthand || 'Unknown',
+      chief_complaint: p.concerns?.[0]?.clinical_shorthand || 'Unknown',
       concerns: p.concerns as any
-    }));
-    setPatients(initialPatients);
+    });
+
+    let cancelled = false;
+
+    const load = async () => {
+      try {
+        const res = await fetch(`${API}/api/patients.json`);
+        if (!res.ok) throw new Error(String(res.status));
+        const feed = await res.json();
+        if (cancelled) return;
+        setPatients(prev => {
+          // Keep whatever the simulation has already escalated locally; only
+          // add patients we have not seen. Otherwise a poll would undo the
+          // ratchet every few seconds.
+          const known = new Set(prev.map(p => p.patient_id));
+          const added = feed.filter((p: any) => !known.has(p.patient_id)).map(toState);
+          return added.length ? [...prev, ...added] : prev;
+        });
+        setLive(true);
+      } catch {
+        if (cancelled) return;
+        setLive(false);
+        setPatients(prev => prev.length ? prev : samplePatients.map(toState));
+      }
+    };
+
+    load();
+    const poll = setInterval(load, 5000);
+    return () => { cancelled = true; clearInterval(poll); };
   }, []);
 
   // Clock
@@ -152,7 +183,12 @@ export default function RetriageQueue() {
   return (
     <div className="dashboard">
       <header className="header">
-        <h1>PatientTriage.ai // Re-Triage Monitor (Mock API)</h1>
+        <h1>
+          PatientTriage.ai // Re-Triage Monitor{' '}
+          <span style={{ fontSize: '0.6em', color: live ? '#4ade80' : '#ff9933' }}>
+            {live ? '● live' : '○ offline — sample data'}
+          </span>
+        </h1>
         <div className="clock-controls">
           <div className="clock">Sim Time: T+{simulationMinute}m</div>
           <div className="speeds">
