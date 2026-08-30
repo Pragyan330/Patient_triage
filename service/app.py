@@ -33,7 +33,9 @@ from fastapi.middleware.cors import CORSMiddleware
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
 from grounding_module import ground
+from grounding_module import news2
 from service.feed import as_demo_patient
+from service.gate import apply_floor, as_grounded, run_gate
 from service.ports import CORS_ORIGINS, GROUNDED_ENDPOINT, GROUNDING_PORT
 from service.store import registry
 from service.verify import verify_event
@@ -78,8 +80,16 @@ def receive_initial(initial: dict = Body(...)) -> dict:
         raise HTTPException(422, "Expected an initial assessment schema with vitals_read")
 
     started = time.perf_counter()
+
+    # Deterministic screen first. It reads structured fields and returns in
+    # microseconds, so a pulseless patient is never held behind a 15s retrieval.
+    gate = run_gate(initial)
+
     try:
-        grounded = ground(initial)
+        if gate.get("bypasses_pipeline"):
+            grounded = as_grounded(initial, gate, news2.from_schema(initial).as_dict())
+        else:
+            grounded = apply_floor(ground(initial), gate)
     except Exception as exc:
         log.exception("grounding failed")
         raise HTTPException(500, f"Grounding failed: {type(exc).__name__}: {exc}")
@@ -101,6 +111,14 @@ def receive_initial(initial: dict = Body(...)) -> dict:
              if row["patient_id"] == record.patient_id), None),
         "took_ms": elapsed,
         "citations_clean": audit.get("clean"),
+        "red_flag_gate": {
+            "result": gate.get("gate_result"),
+            "rule": gate.get("matched_rule_id"),
+            "esi": gate.get("esi"),
+            "bypassed_retrieval": bool(gate.get("bypasses_pipeline")),
+            "missing_fields": gate.get("missing_fields") or [],
+            "low_confidence": bool(gate.get("low_confidence")),
+        },
     }
 
 
