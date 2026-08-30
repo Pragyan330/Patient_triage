@@ -270,6 +270,20 @@ def age_from_schema(initial: dict) -> float | None:
     return parse_age_years(_prose(initial))
 
 
+# The intake form's radio buttons are worded, not lettered - "voice", not "V" -
+# and the LLM that builds the schema may pass either through. Accepting only
+# single letters left `voice` and `pain` unscored, quietly losing the 3 points
+# each should carry; `unresponsive` scored only by accident, because the prose
+# fallback happened to match the word. Both spellings map here.
+AVPU_WORDS = {
+    "a": "A", "alert": "A", "awake": "A",
+    "c": "C", "confusion": "C", "confused": "C", "new confusion": "C",
+    "v": "V", "voice": "V", "responds to voice": "V", "verbal": "V",
+    "p": "P", "pain": "P", "responds to pain": "P",
+    "u": "U", "unresponsive": "U", "unconscious": "U",
+}
+
+
 def consciousness_from_schema(initial: dict, blob: str | None = None) -> str | None:
     """Resolve ACVPU, preferring the structured field but not trusting it blindly.
 
@@ -286,7 +300,7 @@ def consciousness_from_schema(initial: dict, blob: str | None = None) -> str | N
     """
     blob = _prose(initial) if blob is None else blob
     raw = initial.get("avpu")
-    level = str(raw).strip().upper() if raw is not None else None
+    level = AVPU_WORDS.get(str(raw).strip().lower()) if raw is not None else None
 
     if level in {"A", "C", "V", "P", "U"}:
         if level == "A" and NOT_ALERT.search(blob):
