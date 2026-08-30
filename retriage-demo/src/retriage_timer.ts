@@ -36,7 +36,7 @@ export interface Confidence {
 
 export interface PatientState {
   patient_id: string;
-  age: number;
+  age: number | null;
   esi: number;
   last_check_minute: number;
   concerns: Concern[];

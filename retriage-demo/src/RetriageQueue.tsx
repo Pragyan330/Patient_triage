@@ -39,6 +39,21 @@ const ESI_COLORS: Record<number, string> = {
   5: '#339933', // Green
 };
 
+/**
+ * Ages arrive as fractional years, which reads badly at both ends: a
+ * two-week-old showed as "0.04yo" and an unidentified patient as "Noneyo".
+ * Both look like the display is broken, and for an infant the unit is the
+ * clinically meaningful part - days and weeks matter at that age in a way
+ * decimals of a year do not.
+ */
+function formatAge(age: number | null | undefined): string {
+  if (age == null || Number.isNaN(age)) return 'age unknown';
+  if (age < 0.077) return `${Math.max(1, Math.round(age * 365))}d`;   // under 4wks
+  if (age < 1) return `${Math.max(1, Math.round(age * 12))}mo`;
+  if (age < 2) return `${age.toFixed(1)}yo`;
+  return `${Math.round(age)}yo`;
+}
+
 const CONFIDENCE_COLOUR: Record<string, string> = {
   high: '#4ade80', moderate: '#fbbf24', low: '#f87171', unknown: '#6f7684',
 };
@@ -412,7 +427,10 @@ export default function RetriageQueue() {
   useEffect(() => {
     const toState = (p: any) => ({
       patient_id: p.patient_id,
-      age: p.profile?.age ?? 50,
+      // Not `?? 50`. Inventing a plausible age for an unidentified patient is
+      // worse than showing nothing: 50 reads as a fact, and age changes which
+      // thresholds apply.
+      age: p.profile?.age ?? null,
       esi: p.current_esi_floor ?? p.grounded_esi ?? p.provisional_esi,
       last_check_minute: p.arrival_minute,
       chief_complaint: p.concerns?.[0]?.clinical_shorthand || 'Unknown',
@@ -453,6 +471,49 @@ export default function RetriageQueue() {
           // Only replace the array when something actually changed, so React
           // is not re-rendering the whole queue every five seconds.
           return (next.length === prev.length && added.length === 0) ? prev : next;
+        });
+        // Fold in decisions made outside this browser - sweeps, escalations
+        // from the API, an override entered on another screen. The log was
+        // only ever showing what this tab happened to do, which is not an
+        // audit trail; it is a session history dressed up as one.
+        setLogs(prev => {
+          const seen = new Set(prev.map(l => `${l.patient_id}@${l.atIso ?? l.timestamp}`));
+          const incoming: AuditLogEntry[] = [];
+          for (const p of feed as any[]) {
+            for (const e of (p.retriage_events ?? [])) {
+              const key = `${p.patient_id}@${e.recorded_at ?? e.retriage_timestamp_min}`;
+              if (seen.has(key)) continue;
+              seen.add(key);
+              incoming.push({
+                timestamp: e.retriage_timestamp_min ?? 0,
+                patient_id: p.patient_id,
+                old_esi: e.previous_esi_floor,
+                new_esi: e.new_esi_floor,
+                manual: !!e.manual,
+                by: e.overridden_by,
+                reason: e.override_reason,
+                direction: e.direction,
+                at: e.recorded_at_local,
+                atIso: e.recorded_at,
+                response: {
+                  patient_id: p.patient_id,
+                  concerns: [{
+                    concern: e.trigger?.detail ?? '',
+                    clinical_shorthand: e.trigger?.type ?? '',
+                    implied_esi: e.previous_esi_floor, final_esi: e.new_esi_floor,
+                    time_to_treatment_minutes: null,
+                    evidence: e.evidence ?? [],
+                    nurse_summary: e.nurse_summary ?? '',
+                  }],
+                  provisional_esi: e.previous_esi_floor,
+                  grounded_esi: e.new_esi_floor, retrieval_ms: 0,
+                } as any,
+              });
+            }
+          }
+          if (!incoming.length) return prev;
+          return [...incoming, ...prev].sort(
+            (a, b) => (b.atIso ?? '').localeCompare(a.atIso ?? ''));
         });
         setLive(true);
       } catch {
@@ -583,7 +644,7 @@ export default function RetriageQueue() {
                 <div className="patient-card" key={p.patient_id} style={cardStyle}>
                   <div className="card-header">
                     <span className="patient-id">{p.patient_id}</span>
-                    <span className="patient-demographic">{p.age}yo</span>
+                    <span className="patient-demographic">{formatAge(p.age)}</span>
                   </div>
                   <div className="card-body">
                     <div className="esi-badge" style={{ backgroundColor: ESI_COLORS[p.esi] }}>
