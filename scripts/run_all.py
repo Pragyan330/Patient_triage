@@ -28,24 +28,32 @@ from service.ports import (GROUNDED_ENDPOINT, GROUNDING_PORT, INTAKE_PORT,
                            QUEUE_UI_PORT)
 
 
-def mistral_key() -> str | None:
-    """Find the key wherever it lives and hand it to every child process.
+def node_env() -> dict[str, str]:
+    """Secrets the Node side needs, found wherever they actually live.
 
-    The key sits in a .env *outside* the repo so it cannot be committed. The
+    They sit in a .env *outside* the repo so they cannot be committed. The
     Python side looks there; `dotenv.config()` in app.js only looks in ./ and
-    finds nothing. Passing it through the environment beats writing a second
-    copy of the key inside the repo, one `git add -f` away from leaking.
+    finds nothing, so the intake server would run with no Mistral key and no
+    database. Forwarding through the environment beats writing a second copy
+    of the secrets inside the repo, one `git add -f` away from leaking.
+
+    MONGO_URI is optional - app.js warns and skips persistence without it.
     """
     load_dotenv_if_present()
+    passed: dict[str, str] = {}
     try:
-        return Config().api_key()
+        passed["MISTRAL_API_KEY"] = Config().api_key()
     except RuntimeError:
-        return None
+        pass
+    mongo = os.getenv("MONGO_URI")
+    if mongo:
+        passed["MONGO_URI"] = mongo
+    return passed
 
 VENV_PY = ROOT / ".venv" / ("Scripts/python.exe" if os.name == "nt" else "bin/python")
 PYTHON = str(VENV_PY) if VENV_PY.exists() else sys.executable
 
-KEY = None      # resolved in main(), passed to child processes
+NODE_ENV: dict = {}     # resolved in main(), passed to child processes
 
 COLOURS = {"grounding": "\033[36m", "intake": "\033[33m", "queue-ui": "\033[35m"}
 DIM, OFF = "\033[90m", "\033[0m"
@@ -152,8 +160,7 @@ def build(names: set[str]) -> list[Service]:
             needs=ROOT / "node_modules",
             # so OP's server forwards to us, and can reach Mistral, without
             # anyone editing a .env
-            env={"PRAGYAN_SERVER_URL": GROUNDED_ENDPOINT,
-                 **({"MISTRAL_API_KEY": KEY} if KEY else {})},
+            env={"PRAGYAN_SERVER_URL": GROUNDED_ENDPOINT, **NODE_ENV},
         ),
         Service(
             "queue-ui",
@@ -166,16 +173,18 @@ def build(names: set[str]) -> list[Service]:
 
 
 def main() -> None:
-    global KEY
+    global NODE_ENV
     try:
         sys.stdout.reconfigure(encoding="utf-8", errors="replace")
     except Exception:
         pass
-    KEY = mistral_key()
+    NODE_ENV = node_env()
 
-    if not KEY:
+    if "MISTRAL_API_KEY" not in NODE_ENV:
         print("  \033[33mwarning\033[0m no Mistral key found - intake will fail. "
               "Set mistral_api or MISTRAL_API_KEY in a .env.")
+    if "MONGO_URI" not in NODE_ENV:
+        print(f"  {DIM}no MONGO_URI - intake runs without persistence{OFF}")
 
     # flags are not service names; without this, `--no-open` was read as a
     # service, matched nothing, and the launcher exited

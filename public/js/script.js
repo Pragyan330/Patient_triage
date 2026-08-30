@@ -1,3 +1,8 @@
+// Where to land after a successful intake. Everything runs on localhost with a
+// port each, so this is the queue UI's dev server. Overridable from the page
+// (window.QUEUE_UI_URL) if the port is taken.
+const QUEUE_UI_URL = window.QUEUE_UI_URL || "http://localhost:5173/";
+
 function handleSubmit(event) {
     event.preventDefault();
 
@@ -56,9 +61,11 @@ function handleSubmit(event) {
     })
     .then(response => response.json())
     .then(data => {
-        document.getElementById('loadingOverlay').style.display = 'none';
         console.log("Success! Received generated schema:", data);
-        alert("Patient data processed and sent to Pragyan's Server successfully!");
+        // Straight to the queue in this tab. The overlay stays up through the
+        // navigation - clearing it first flashes an empty form for the moment
+        // before the browser leaves, which reads as "nothing happened".
+        window.location.href = QUEUE_UI_URL;
     })
     .catch(error => {
         document.getElementById('loadingOverlay').style.display = 'none';
