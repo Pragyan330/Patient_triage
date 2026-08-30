@@ -189,6 +189,43 @@ def new_vitals(patient_id: str, vitals: dict = Body(...)) -> dict:
     }
 
 
+@app.post("/api/patients/{patient_id}/override")
+def override(patient_id: str, body: dict = Body(...)) -> dict:
+    """A nurse setting the ESI by hand — the only path allowed to de-escalate.
+
+    The automatic loop is an escalate-only ratchet on purpose. This sits
+    outside it, records who decided and why, and flags a de-escalation for
+    review so it is visible to whoever looks at the queue next.
+    """
+    if registry.get(patient_id) is None:
+        raise HTTPException(404, f"No patient {patient_id}")
+
+    esi = body.get("esi")
+    if esi is None:
+        raise HTTPException(422, "esi is required (1-5)")
+
+    reason = (body.get("reason") or "").strip()
+    try:
+        target = int(esi)
+    except (TypeError, ValueError):
+        raise HTTPException(422, f"esi must be a number, got {esi!r}")
+
+    # De-escalation moves a patient further down the queue. That is the one
+    # direction that can harm by omission, so it does not happen unexplained.
+    current = registry.get(patient_id).state.esi_floor
+    if target > current and not reason:
+        raise HTTPException(
+            422, "A reason is required to de-escalate: this moves the patient "
+                 "further down the queue.")
+
+    try:
+        event = registry.override_esi(patient_id, target, reason=reason,
+                                      by=(body.get("by") or "nurse").strip())
+    except ValueError as exc:
+        raise HTTPException(422, str(exc))
+    return event
+
+
 @app.post("/api/sweep")
 def sweep() -> dict:
     """Periodic pass over the whole queue. No new vitals - time-based only."""

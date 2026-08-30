@@ -86,6 +86,110 @@ function SourceList({ patient }: { patient: PatientState }) {
   );
 }
 
+/**
+ * Set the ESI by hand.
+ *
+ * retriage_loop is an escalate-only ratchet: automatic urgency moves down the
+ * numbers and never back up, "except by a separate, explicitly logged nurse
+ * action that is NOT part of this function". This is that action.
+ *
+ * De-escalation is the direction that can harm by omission - it moves someone
+ * further down the queue - so it asks for a reason and will not submit without
+ * one. Escalating needs no justification: the safe direction should be one
+ * click, because friction there costs more than it saves.
+ */
+function OverridePanel({ patient, onClose, onDone }: {
+  patient: PatientState;
+  onClose: () => void;
+  onDone: (esi: number, event: any) => void;
+}) {
+  const [target, setTarget] = useState<number>(patient.esi);
+  const [reason, setReason] = useState('');
+  const [by, setBy] = useState('nurse');
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const deEscalating = target > patient.esi;
+  const blocked = deEscalating && !reason.trim();
+
+  const submit = async () => {
+    setBusy(true); setError(null);
+    try {
+      const res = await fetch(`${API}/api/patients/${encodeURIComponent(patient.patient_id)}/override`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ esi: target, reason: reason.trim(), by: by.trim() || 'nurse' }),
+      });
+      const body = await res.json();
+      if (!res.ok) throw new Error(body?.detail ?? `HTTP ${res.status}`);
+      onDone(target, body);
+    } catch (e: any) {
+      setError(e?.message ?? 'Override failed');
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  return (
+    <div style={{ ...panelStyle, borderColor: '#3d2f10', background: '#161208' }}>
+      <div style={{ color: '#fbbf24', fontSize: '0.78em', marginBottom: '0.5rem' }}>
+        Manual override — currently ESI {patient.esi}
+      </div>
+
+      <div style={{ display: 'flex', gap: '0.3rem', marginBottom: '0.5rem' }}>
+        {[1, 2, 3, 4, 5].map(n => (
+          <button key={n} onClick={() => setTarget(n)} disabled={busy}
+            style={{
+              flex: 1, padding: '5px 0', cursor: 'pointer', fontWeight: 600,
+              borderRadius: '4px',
+              border: n === target ? '2px solid #fff' : '1px solid #3b475f',
+              background: n === target ? ESI_COLORS[n] : 'transparent',
+              color: n === target ? '#111' : '#8b93a3',
+            }}>{n}</button>
+        ))}
+      </div>
+
+      {deEscalating && (
+        <div style={{ color: '#fbbf24', fontSize: '0.75em', marginBottom: '0.35rem' }}>
+          This lowers urgency and moves the patient down the queue. A reason is required.
+        </div>
+      )}
+
+      <input value={by} onChange={e => setBy(e.target.value)} disabled={busy}
+        placeholder="your name" style={inputStyle} />
+      <input value={reason} onChange={e => setReason(e.target.value)} disabled={busy}
+        placeholder={deEscalating ? 'Reason (required)' : 'Reason (optional)'}
+        style={inputStyle} />
+
+      {error && <div style={{ color: '#f87171', fontSize: '0.75em' }}>{error}</div>}
+
+      <div style={{ display: 'flex', gap: '0.4rem', marginTop: '0.4rem' }}>
+        <button onClick={submit} disabled={busy || blocked || target === patient.esi}
+          style={{
+            flex: 1, padding: '5px', borderRadius: '4px', border: 'none', fontWeight: 600,
+            cursor: (busy || blocked || target === patient.esi) ? 'not-allowed' : 'pointer',
+            background: (busy || blocked || target === patient.esi) ? '#2a2f3a' : '#fbbf24',
+            color: (busy || blocked || target === patient.esi) ? '#6f7684' : '#111',
+          }}>
+          {busy ? 'Saving…' : target === patient.esi ? 'Pick a different level'
+            : `Set ESI ${target}`}
+        </button>
+        <button onClick={onClose} disabled={busy}
+          style={{ padding: '5px 12px', borderRadius: '4px', cursor: 'pointer',
+                   background: 'transparent', border: '1px solid #3b475f', color: '#8b93a3' }}>
+          Cancel
+        </button>
+      </div>
+    </div>
+  );
+}
+
+const inputStyle: React.CSSProperties = {
+  width: '100%', marginBottom: '0.3rem', padding: '4px 7px', fontSize: '0.8em',
+  background: '#0f1115', border: '1px solid #262c3a', borderRadius: '4px',
+  color: '#d7dae0', boxSizing: 'border-box',
+};
+
 const panelStyle: React.CSSProperties = {
   marginTop: '0.5rem', padding: '0.6rem', background: '#0f1115',
   border: '1px solid #262c3a', borderRadius: '6px', fontSize: '0.85em'
@@ -95,6 +199,7 @@ export default function RetriageQueue() {
   const [patients, setPatients] = useState<PatientState[]>([]);
   const [live, setLive] = useState(false);   // true when the service answers
   const [sourcesFor, setSourcesFor] = useState<string | null>(null);
+  const [overrideFor, setOverrideFor] = useState<string | null>(null);
   const [logs, setLogs] = useState<AuditLogEntry[]>([]);
   const [simulationMinute, setSimulationMinuteState] = useState(0);
   const simulationMinuteRef = useRef(0);
@@ -309,12 +414,29 @@ export default function RetriageQueue() {
                     {/* The citations are the point of the grounding step, and
                         they were invisible here. Small, out of the way, on
                         the right - a nurse opens it to check, not to read. */}
+                    {/* Clinical judgement outranks the score. This is the only
+                        path allowed to de-escalate - the automatic loop is an
+                        escalate-only ratchet by design. */}
+                    <button
+                      className="override-btn"
+                      title="Set the ESI by hand"
+                      onClick={() => setOverrideFor(overrideFor === p.patient_id ? null : p.patient_id)}
+                      style={{
+                        marginLeft: 'auto', fontSize: '0.75em', padding: '3px 9px',
+                        background: 'transparent', border: '1px solid #3b475f',
+                        color: overrideFor === p.patient_id ? '#fbbf24' : '#8b93a3',
+                        borderRadius: '4px', cursor: 'pointer', whiteSpace: 'nowrap'
+                      }}
+                    >
+                      override
+                    </button>
+
                     <button
                       className="sources-btn"
                       title="Show the protocol pages this came from"
                       onClick={() => setSourcesFor(sourcesFor === p.patient_id ? null : p.patient_id)}
                       style={{
-                        marginLeft: 'auto', fontSize: '0.75em', padding: '3px 9px',
+                        fontSize: '0.75em', padding: '3px 9px',
                         background: 'transparent', border: '1px solid #3b475f',
                         color: sourcesFor === p.patient_id ? '#7aa2ff' : '#8b93a3',
                         borderRadius: '4px', cursor: 'pointer', whiteSpace: 'nowrap'
@@ -325,6 +447,36 @@ export default function RetriageQueue() {
                   </div>
 
                   {sourcesFor === p.patient_id && <SourceList patient={p} />}
+                  {overrideFor === p.patient_id && (
+                    <OverridePanel
+                      patient={p}
+                      onClose={() => setOverrideFor(null)}
+                      onDone={(esi, event) => {
+                        setOverrideFor(null);
+                        setPatients(prev => prev.map(x =>
+                          x.patient_id === p.patient_id
+                            ? { ...x, esi, last_check_minute: simulationMinuteRef.current }
+                            : x));
+                        setLogs(prev => [{
+                          timestamp: simulationMinuteRef.current,
+                          patient_id: p.patient_id,
+                          old_esi: p.esi,
+                          new_esi: esi,
+                          response: {
+                            patient_id: p.patient_id,
+                            concerns: [{
+                              concern: event.trigger?.detail ?? 'Manual override',
+                              clinical_shorthand: '!manual',
+                              implied_esi: p.esi, final_esi: esi,
+                              time_to_treatment_minutes: null, evidence: [],
+                              nurse_summary: event.nurse_summary ?? '',
+                            }],
+                            provisional_esi: p.esi, grounded_esi: esi, retrieval_ms: 0,
+                          },
+                        }, ...prev]);
+                      }}
+                    />
+                  )}
                 </div>
               );
             })}
