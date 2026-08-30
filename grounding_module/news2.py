@@ -254,8 +254,13 @@ def age_from_schema(initial: dict) -> float | None:
     the patient's actual "58," - the anchored patterns only mean anything when
     they are applied per field.
     """
-    if isinstance(initial.get("age_years"), (int, float)):
-        return float(initial["age_years"])
+    # v2 carries a real number. Prefer it over anything scraped from prose -
+    # this feeds the paediatric gate, and a regex that misses turns a refusal
+    # into a confident score on the wrong bands.
+    for key in ("age", "age_years"):
+        value = initial.get(key)
+        if isinstance(value, (int, float)) and not isinstance(value, bool):
+            return float(value)
     for key in AGE_FIELDS:
         value = initial.get(key)
         if isinstance(value, str):
@@ -265,28 +270,70 @@ def age_from_schema(initial: dict) -> float | None:
     return parse_age_years(_prose(initial))
 
 
+# The intake form's radio buttons are worded, not lettered - "voice", not "V" -
+# and the LLM that builds the schema may pass either through. Accepting only
+# single letters left `voice` and `pain` unscored, quietly losing the 3 points
+# each should carry; `unresponsive` scored only by accident, because the prose
+# fallback happened to match the word. Both spellings map here.
+AVPU_WORDS = {
+    "a": "A", "alert": "A", "awake": "A",
+    "c": "C", "confusion": "C", "confused": "C", "new confusion": "C",
+    "v": "V", "voice": "V", "responds to voice": "V", "verbal": "V",
+    "p": "P", "pain": "P", "responds to pain": "P",
+    "u": "U", "unresponsive": "U", "unconscious": "U",
+}
+
+
+def consciousness_from_schema(initial: dict, blob: str | None = None) -> str | None:
+    """Resolve ACVPU, preferring the structured field but not trusting it blindly.
+
+    v2 sends `avpu`, which is a real improvement over keyword-matching prose.
+    There is one catch worth the extra code: AVPU has four levels and NEWS2
+    scores on ACVPU, which has five. The extra one is C - new confusion - and
+    it exists precisely because a confused patient who is otherwise wide awake
+    scores 3, not 0. That change was the headline of the 2017 revision.
+
+    So a form offering only A/V/P/U will record a newly confused but awake
+    patient as "A". Taking that at face value drops three points and can move
+    an urgent patient below the escalation threshold. When the field says A and
+    the notes describe new confusion, the notes win.
+    """
+    blob = _prose(initial) if blob is None else blob
+    raw = initial.get("avpu")
+    level = AVPU_WORDS.get(str(raw).strip().lower()) if raw is not None else None
+
+    if level in {"A", "C", "V", "P", "U"}:
+        if level == "A" and NOT_ALERT.search(blob):
+            return "C"          # confusion the four-level scale cannot express
+        return level
+
+    # v1, or an unrecognised value: fall back to reading the prose
+    if NOT_ALERT.search(blob):
+        return "C/V/P/U"
+    if ALERT_PHRASE.search(blob):
+        return "A"
+    return None
+
+
 def from_schema(initial: dict) -> News2Result:
     """Score straight from an initial-judge schema.
 
-    Everything the upstream LLM records in prose - age, whether the patient is
-    alert, whether they are on oxygen - has to be read back out here, because
-    the schema has no fields for them. That is fragile by construction; the
-    real module should ask upstream for structured fields.
+    v2 supplies `age` and `avpu` as real fields. Anything still absent - most
+    importantly whether the patient is on oxygen - is read back out of the
+    prose, which is fragile by construction and should move upstream next.
     """
     vitals = dict(initial.get("vitals_read") or {})
     for k in (initial.get("vitals_read", {}) or {}).get("not_measured", []) or []:
         vitals.pop(k, None)
     vitals.pop("not_measured", None)
+    # v2 sends unmeasured observations as explicit nulls rather than omitting
+    # them; a None must not reach float().
+    vitals = {k: v for k, v in vitals.items() if v is not None}
 
     blob = _prose(initial)
 
     age = age_from_schema(initial)
-
-    consciousness = None
-    if NOT_ALERT.search(blob):
-        consciousness = "C/V/P/U"
-    elif ALERT_PHRASE.search(blob):
-        consciousness = "A"
+    consciousness = consciousness_from_schema(initial, blob)
 
     on_oxygen = None
     if ON_OXYGEN.search(blob):
