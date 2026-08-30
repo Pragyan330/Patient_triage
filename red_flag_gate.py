@@ -17,7 +17,22 @@ def get_age(data: Dict[str, Any]) -> Optional[float]:
     return float(val) if val is not None else None
 
 def get_avpu(data: Dict[str, Any]) -> Optional[str]:
-    return data.get("avpu")
+    """Normalise AVPU to a single letter before any rule sees it.
+
+    The intake form's radio buttons are worded - "unresponsive", not "U" - so
+    rules comparing against ["U", "P"] silently missed. An unresponsive patient
+    fell past R2 (ESI 1, bypass) down to R13 and came out ESI 2 with no bypass:
+    under-triaged by a level, and made to wait for retrieval, on exactly the
+    presentation this gate exists to catch. Priyam's fixtures use letters, so
+    the tests passed throughout.
+
+    news2.AVPU_WORDS is the shared mapping, so "V" means the same thing here
+    and in the scorer rather than being defined twice.
+    """
+    raw = data.get("avpu")
+    if raw is None:
+        return None
+    return news2.AVPU_WORDS.get(str(raw).strip().lower())
 
 def get_vital(data: Dict[str, Any], key: str) -> Optional[float]:
     vitals = data.get("vitals_read", {})
