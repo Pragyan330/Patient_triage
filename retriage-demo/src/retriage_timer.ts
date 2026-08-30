@@ -42,8 +42,38 @@ export const CHECK_THRESHOLDS: Record<number, number> = {
   5: 120
 };
 
-// Mock async function to simulate Pragyan backend network call
+// The grounding + re-triage service. Everything runs on localhost.
+export const API = import.meta.env.VITE_API ?? 'http://127.0.0.1:8000';
+
+/**
+ * Send new observations for one patient and get the re-triage decision back.
+ *
+ * Raw vitals go over the wire; the service scores NEWS2 itself. That is
+ * deliberate - the NEWS2 arithmetic lives in one place, in code, because the
+ * observation chart cannot be read back out of the PDF reliably.
+ *
+ * Falls back to the local mock if the service is unreachable, so the demo
+ * still runs with the backend down.
+ */
 export async function sendVitalsForRetriage(patient_id: string, vitals: VitalsInput, timestamp: number): Promise<PragyanResponse> {
+  try {
+    const res = await fetch(`${API}/api/patients/${encodeURIComponent(patient_id)}/vitals`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ ...vitals, note: `observations at minute ${timestamp}` }),
+    });
+    if (res.ok) {
+      const data = await res.json();
+      if (!data.skipped) return data as PragyanResponse;
+    }
+  } catch {
+    // service down - fall through to the mock below
+  }
+  return mockRetriage(patient_id, vitals);
+}
+
+// Kept as an offline fallback only. Not the integration path.
+async function mockRetriage(patient_id: string, vitals: VitalsInput): Promise<PragyanResponse> {
   return new Promise((resolve) => {
     setTimeout(() => {
       // Create a deterministic mock response that shows a dynamic ESI based on the input
