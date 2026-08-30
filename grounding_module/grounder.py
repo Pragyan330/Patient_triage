@@ -241,6 +241,12 @@ class Grounder:
         patient_id = initial.get("patient_id") or patient_id or "P-000"
 
         score = news2.from_schema(initial)
+        # `source` names the chart page the NEWS2 bands come from. Rendered into
+        # the prompt it reads exactly like an evidence citation, and the model
+        # duly cited "NEWS2 p.58" with a criterion of "red_score: true, risk:
+        # high". The verifier caught it, but the cleaner fix is not to dangle a
+        # page number in front of the model that it is not allowed to use.
+        score_for_prompt = {k: v for k, v in score.as_dict().items() if k != "source"}
 
         blocks: list[EvidenceBlock] = []
         seen: set[tuple[str, int]] = set()
@@ -258,8 +264,10 @@ class Grounder:
         user = (
             f"PATIENT ID: {patient_id}\n\n"
             f"INITIAL ASSESSMENT (upstream LLM):\n{json.dumps(initial, indent=2)}\n\n"
-            f"NEWS2, COMPUTED DETERMINISTICALLY - use this total, do not recalculate:\n"
-            f"{json.dumps(score.as_dict(), indent=2)}\n\n"
+            f"NEWS2, COMPUTED DETERMINISTICALLY - use this verdict, do not recalculate.\n"
+            f"This block is a computation, NOT retrievable evidence: never cite a page\n"
+            f"from it, and never quote its fields as a criterion.\n"
+            f"{json.dumps(score_for_prompt, indent=2)}\n\n"
             f"RETRIEVED EVIDENCE - the only citations you may use:\n{evidence_text}"
         )
 

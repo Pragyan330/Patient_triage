@@ -38,6 +38,9 @@ function handleSubmit(event) {
         vitals: vitals
     };
 
+    // Show Loading Overlay
+    document.getElementById('loadingOverlay').style.display = 'flex';
+
     // Send payload to backend
     console.log("Sending payload to backend...");
     fetch("/api/triage", {
@@ -49,10 +52,12 @@ function handleSubmit(event) {
     })
     .then(response => response.json())
     .then(data => {
+        document.getElementById('loadingOverlay').style.display = 'none';
         console.log("Success! Received generated schema:", data);
         alert("Patient data processed and sent to Pragyan's Server successfully!");
     })
     .catch(error => {
+        document.getElementById('loadingOverlay').style.display = 'none';
         console.error("Error sending data:", error);
         alert("Failed to process data. Check console for details.");
     });

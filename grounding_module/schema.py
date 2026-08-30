@@ -32,6 +32,15 @@ class InitialAssessment(BaseModel):
     patient_id: Optional[str] = None
     concern: Optional[str] = None
     what_keeps_it_open: Optional[str] = None
+
+    # Prose fields from the intake form. age_sex_note is load-bearing: news2.py
+    # parses the patient's age out of it to decide whether NEWS2 applies at
+    # all. It reached us only through extra="allow" until now, which made a
+    # safety gate depend on an undeclared field.
+    age_sex_note: Optional[str] = None
+    arrival_mode_note: Optional[str] = None
+    medication_effect: Optional[str] = None
+    allergy_note: Optional[str] = None
     vitals_read: dict = Field(default_factory=dict)
     lookups: list[Lookup] = Field(default_factory=list)
     implied_esi: Optional[int] = None

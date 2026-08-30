@@ -5,6 +5,7 @@ const { Mistral } = require('@mistralai/mistralai');
 const mistral = new Mistral({ apiKey: process.env.MISTRAL_API_KEY || 'MISSING_KEY' });
 const path = require("path");
 const methodOverride = require("method-override");
+const wrapAsync = require("./utils/wrapAsync");
 app.use(methodOverride("_method"));
 
 app.use(express.static(path.join(__dirname, "public")));
@@ -29,71 +30,53 @@ app.get("/patient_info", (req, res) => {
     res.render("patient_info");
 });
 
-app.post("/api/triage", async (req, res) => {
-    try {
-        const payload = req.body;
-        
-        const systemPrompt = `You are an expert clinical triage assistant. Given the patient intake data, convert it into the exact JSON schema defined below. Do not include markdown formatting or any text outside of the JSON object.
+app.post("/api/triage", wrapAsync(async (req, res, next) => {
+    const payload = req.body;
+    
+    const triageSchema = require('./schemas/triage_schema.json');
+    const systemPrompt = `You are an expert clinical triage assistant. Given the patient intake data, convert it into the exact JSON schema defined below. Do not include markdown formatting or any text outside of the JSON object.
 Schema:
-{
-  "patient_id": "string",
-  "concern": "string",
-  "what_keeps_it_open": "string",
-  "arrival_mode_note": "string",
-  "medication_effect": "string",
-  "allergy_note": "string",
-  "age_sex_note": "string",
-  "vitals_read": {
-    "heart_rate": "number",
-    "respiratory_rate": "number",
-    "systolic_bp": "number",
-    "spo2": "number",
-    "temperature_c": "number",
-    "not_measured": ["string array"]
-  },
-  "lookups": [
-    {
-      "intent": "string",
-      "question": "string",
-      "presentation_terms": ["string array"],
-      "prefer_document": "string",
-      "vitals_read": { "key": "value" },
-      "answer_shape": "string",
-      "priority": "number"
-    }
-  ],
-  "implied_esi": "number",
-  "implied_esi_reasoning": "string"
-}`;
+${JSON.stringify(triageSchema, null, 2)}`;
 
-        const chatResponse = await mistral.chat.complete({
-            model: 'mistral-large-latest',
-            messages: [
-                { role: 'system', content: systemPrompt },
-                { role: 'user', content: JSON.stringify(payload) }
-            ],
-            responseFormat: { type: 'json_object' }
-        });
+    const chatResponse = await mistral.chat.complete({
+        model: 'open-mistral-nemo',
+        messages: [
+            { role: 'system', content: systemPrompt },
+            { role: 'user', content: JSON.stringify(payload) }
+        ],
+        responseFormat: { type: 'json_object' }
+    });
 
-        const generatedJSON = JSON.parse(chatResponse.choices[0].message.content);
+    const generatedJSON = JSON.parse(chatResponse.choices[0].message.content);
 
-        // Forward to Pragyan's server
-        const pragyanUrl = process.env.PRAGYAN_SERVER_URL;
-        if (pragyanUrl) {
-            console.log("Forwarding to Pragyan's Server:", pragyanUrl);
+    // Forward to Pragyan's server
+    console.log("generatedjson :",generatedJSON);
+    
+    // Everything runs on localhost; default to the grounding service's port
+    // so a fresh clone works without anyone writing a .env first.
+    const pragyanUrl = process.env.PRAGYAN_SERVER_URL || 'http://127.0.0.1:8000/api/grounded';
+    if (pragyanUrl) {
+        console.log("Forwarding to Pragyan's Server:", pragyanUrl);
+        try {
             await fetch(pragyanUrl, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify(generatedJSON)
             });
-        } else {
-            console.warn("PRAGYAN_SERVER_URL not set in .env. Skipping forwarding.");
+            console.log("Successfully forwarded to Pragyan's Server.");
+        } catch (forwardError) {
+            console.warn("Warning: Failed to forward to Pragyan's Server. (Is the URL correct?)", forwardError.message);
         }
-
-        res.json({ success: true, data: generatedJSON });
-    } catch (error) {
-        console.error("Error processing triage:", error);
-        res.status(500).json({ error: "Failed to process triage data" });
+    } else {
+        console.warn("PRAGYAN_SERVER_URL not set in .env. Skipping forwarding.");
     }
+
+    res.json({ success: true, data: generatedJSON });
+}));
+
+// Global error handler
+app.use((err, req, res, next) => {
+    console.error("Error caught by wrapAsync:", err);
+    res.status(err.status || 500).json({ error: err.message || "Internal Server Error" });
 });
 

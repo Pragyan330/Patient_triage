@@ -27,9 +27,74 @@ const ESI_COLORS: Record<number, string> = {
   5: '#339933', // Green
 };
 
+const countEvidence = (p: PatientState) =>
+  (p.concerns ?? []).reduce((n, c) => n + (c.evidence?.length ?? 0), 0);
+
+/**
+ * Where each ESI decision came from: the document, the page number printed on
+ * the paper, and the sentence itself, verbatim.
+ *
+ * The quotes are checked against the source PDFs before they reach here - a
+ * citation that could not be verified is marked rather than dropped silently,
+ * because "no evidence" and "evidence we could not confirm" are different
+ * things and a nurse should be able to tell them apart.
+ */
+function SourceList({ patient }: { patient: PatientState }) {
+  const concerns = (patient.concerns ?? []).filter(c => (c.evidence?.length ?? 0) > 0);
+
+  if (!concerns.length) {
+    return (
+      <div className="sources" style={panelStyle}>
+        <em style={{ color: '#8b93a3' }}>
+          No protocol citation for this patient. The acuity still stands on the
+          NEWS2 score and the nurse's own assessment - there is simply nothing
+          in the corpus to quote for it.
+        </em>
+      </div>
+    );
+  }
+
+  return (
+    <div className="sources" style={panelStyle}>
+      {concerns.map((c, ci) => (
+        <div key={ci} style={{ marginBottom: '0.6rem' }}>
+          <div style={{ color: '#8b93a3', fontSize: '0.75em', marginBottom: '0.25rem' }}>
+            {c.clinical_shorthand} &middot; ESI {c.final_esi}
+            {c.time_to_treatment_minutes != null && ` · within ${c.time_to_treatment_minutes} min`}
+          </div>
+          {c.evidence.map((e, ei) => {
+            const unverified = (e as any).verified === false;
+            return (
+              <div key={ei} style={{
+                borderLeft: `2px solid ${unverified ? '#fbbf24' : '#4c7dfd'}`,
+                padding: '4px 10px', margin: '4px 0', background: '#131721',
+                borderRadius: '0 4px 4px 0'
+              }}>
+                <div style={{ color: unverified ? '#fbbf24' : '#7aa2ff', fontSize: '0.75em' }}>
+                  {e.document} — p.{e.page}
+                  {unverified && ' · could not be verified in the corpus'}
+                </div>
+                <div style={{ color: '#c3c9d4', fontSize: '0.8em', fontStyle: 'italic' }}>
+                  “{e.criterion}”
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      ))}
+    </div>
+  );
+}
+
+const panelStyle: React.CSSProperties = {
+  marginTop: '0.5rem', padding: '0.6rem', background: '#0f1115',
+  border: '1px solid #262c3a', borderRadius: '6px', fontSize: '0.85em'
+};
+
 export default function RetriageQueue() {
   const [patients, setPatients] = useState<PatientState[]>([]);
   const [live, setLive] = useState(false);   // true when the service answers
+  const [sourcesFor, setSourcesFor] = useState<string | null>(null);
   const [logs, setLogs] = useState<AuditLogEntry[]>([]);
   const [simulationMinute, setSimulationMinuteState] = useState(0);
   const simulationMinuteRef = useRef(0);
@@ -162,7 +227,11 @@ export default function RetriageQueue() {
         return {
           ...p,
           esi: response.grounded_esi,
-          concerns: response.concerns,
+          // Keep the original grounding alongside the re-triage reason.
+          // Replacing threw away the citations the admission decision was
+          // built on, so Sources showed less the longer a patient waited -
+          // exactly backwards. Newest first, history underneath.
+          concerns: [...response.concerns, ...p.concerns],
           last_check_minute: currentSimMinute // Reset timer to NOW, not 1.5s ago
         };
       }
@@ -229,14 +298,33 @@ export default function RetriageQueue() {
                       {timer.text}
                     </div>
                   </div>
-                  <div className="card-actions">
-                    <button 
-                      onClick={() => setSelectedPatientId(p.patient_id)} 
+                  <div className="card-actions" style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                    <button
+                      onClick={() => setSelectedPatientId(p.patient_id)}
                       style={timer.due ? { backgroundColor: '#ff9933', color: '#111', fontWeight: 'bold' } : {}}
                     >
                       {timer.due ? 'Enter Vitals Now' : 'Update Vitals...'}
                     </button>
+
+                    {/* The citations are the point of the grounding step, and
+                        they were invisible here. Small, out of the way, on
+                        the right - a nurse opens it to check, not to read. */}
+                    <button
+                      className="sources-btn"
+                      title="Show the protocol pages this came from"
+                      onClick={() => setSourcesFor(sourcesFor === p.patient_id ? null : p.patient_id)}
+                      style={{
+                        marginLeft: 'auto', fontSize: '0.75em', padding: '3px 9px',
+                        background: 'transparent', border: '1px solid #3b475f',
+                        color: sourcesFor === p.patient_id ? '#7aa2ff' : '#8b93a3',
+                        borderRadius: '4px', cursor: 'pointer', whiteSpace: 'nowrap'
+                      }}
+                    >
+                      {countEvidence(p)} source{countEvidence(p) === 1 ? '' : 's'}
+                    </button>
                   </div>
+
+                  {sourcesFor === p.patient_id && <SourceList patient={p} />}
                 </div>
               );
             })}
