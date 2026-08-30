@@ -6,7 +6,21 @@ const mistral = new Mistral({ apiKey: process.env.MISTRAL_API_KEY || 'MISSING_KE
 const path = require("path");
 const methodOverride = require("method-override");
 const wrapAsync = require("./utils/wrapAsync");
+const mongoose = require("mongoose");
+const { v4: uuidv4 } = require("uuid");
+const Triage = require("./models/Triage");
+
 app.use(methodOverride("_method"));
+
+// MongoDB Connection
+const dbUrl = process.env.MONGO_URI;
+if (dbUrl) {
+    mongoose.connect(dbUrl)
+        .then(() => console.log("Connected to MongoDB Database!"))
+        .catch(err => console.error("MongoDB Connection Error:", err));
+} else {
+    console.warn("MONGO_URI not set in .env. Database connection skipped.");
+}
 
 app.use(express.static(path.join(__dirname, "public")));
 app.use(express.urlencoded({ extended: true }));
@@ -33,6 +47,9 @@ app.get("/patient_info", (req, res) => {
 app.post("/api/triage", wrapAsync(async (req, res, next) => {
     const payload = req.body;
     
+    // Generate a highly secure UUID for the patient tracking
+    const patientId = uuidv4();
+    
     const triageSchema = require('./schemas/triage_schema.json');
     const systemPrompt = `You are an expert clinical triage assistant. Given the patient intake data, convert it into the exact JSON schema defined below. Do not include markdown formatting or any text outside of the JSON object.
 Schema:
@@ -48,6 +65,20 @@ ${JSON.stringify(triageSchema, null, 2)}`;
     });
 
     const generatedJSON = JSON.parse(chatResponse.choices[0].message.content);
+    
+    // Inject the secure patient ID into the LLM's generated output to ensure accuracy
+    generatedJSON.patient_id = patientId;
+
+    // Save BOTH the raw data and the LLM data into MongoDB (if connected)
+    if (mongoose.connection.readyState === 1) {
+        const newTriage = new Triage({
+            patientId: patientId,
+            rawIntake: payload,
+            llmTriage: generatedJSON
+        });
+        await newTriage.save();
+        console.log("Successfully saved patient triage to MongoDB.");
+    }
 
     // Forward to Pragyan's server
     console.log("generatedjson :",generatedJSON);
