@@ -168,3 +168,35 @@ Last full run: 6/6 cases clean, 28/28 citations verbatim on the page they cite,
 | `scripts/fetch_corpus.py` | downloads the protocol PDFs |
 | `corpus/` | the PDFs (gitignored) |
 | `sim/` | local debug tools — runner, REPL, viewer, tests (gitignored) |
+
+---
+
+## Other Modules
+
+### Intake Service (`app.js` & `views/`)
+- **Purpose**: The entry point for the triage workflow, replacing traditional paper forms or basic EMR text boxes.
+- **Technologies**: Node.js, Express, Embedded JavaScript templating (EJS).
+- **Workflow**: 
+  1. A frontend form captures unstructured chief complaints, vital signs, allergies, and mechanisms of injury.
+  2. Submitting the form triggers an API call to Mistral.
+  3. The LLM acts as an initial parser, reading the clinical narrative and formatting it into a rigid JSON structure conforming to the strict schema (`schema_initial_example.json`).
+- **Why it matters**: It normalizes messy, human-entered clinical shorthand into clean, structured data ready for deterministic gates and the semantic retrieval module.
+
+### Nurse Queue UI (`retriage-demo/`)
+- **Purpose**: The real-time situational awareness dashboard for triage nurses.
+- **Technologies**: React, Vite, TypeScript, TailwindCSS.
+- **Features**:
+  - **Live Polling**: Automatically polls the backend (port 8000) for new patient assessments.
+  - **Dynamic Retriage Timers**: Displays visual countdown timers for each patient (e.g., 15 minutes, 30 minutes, 60 minutes) depending on their assigned ESI level and physiological stability.
+  - **Urgency Visualization**: Highlights ESI 1 (immediate) and ESI 2 (emergent) patients aggressively so they are never lost in a busy waiting room.
+  - **Fallback Mechanics**: Smoothly degrades to static sample data if the live backend connection drops or is temporarily unreachable.
+
+### Red-Flag Gate (`red_flag_gate.py`)
+- **Purpose**: A deterministic, fail-closed safety net that intercepts patients *before* they reach the LLM Grounding Module.
+- **Design Philosophy**: "No LLM hallucinations for life-threatening conditions." 
+- **How it works**:
+  - Takes the structured JSON and evaluates it sequentially through a gauntlet of **16 hardcoded clinical rules**.
+  - **Tier 1 rules (ESI 1)**: Checks for absolute emergencies like pulselessness, apnea, severe hypoxia (SpO2 < 90), active seizures, unresponsiveness, or neonatal fever.
+  - **Tier 2 rules (ESI 2)**: Checks for high-risk mechanisms (stroke signs, severe burns, airway swelling), pediatric vital sign boundaries based on precise age bands, and adult NEWS2 aggregate scores (via `grounding_module/news2.py`).
+  - If any rule matches, the gate immediately returns an ESI score and hardcoded citations, completely bypassing the slower retrieval pipeline for instant escalation.
+- **Failsafes**: If critical physiological fields (like age or consciousness level) are missing from the intake data, it safely "fails closed" (returns `no_match` with `low_confidence`) to ensure the patient is safely routed through the full retrieval/LLM pipeline rather than being wrongly downgraded.
