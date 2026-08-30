@@ -23,11 +23,29 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT))
 
+from grounding_module.config import Config, load_dotenv_if_present
 from service.ports import (GROUNDED_ENDPOINT, GROUNDING_PORT, INTAKE_PORT,
                            QUEUE_UI_PORT)
 
+
+def mistral_key() -> str | None:
+    """Find the key wherever it lives and hand it to every child process.
+
+    The key sits in a .env *outside* the repo so it cannot be committed. The
+    Python side looks there; `dotenv.config()` in app.js only looks in ./ and
+    finds nothing. Passing it through the environment beats writing a second
+    copy of the key inside the repo, one `git add -f` away from leaking.
+    """
+    load_dotenv_if_present()
+    try:
+        return Config().api_key()
+    except RuntimeError:
+        return None
+
 VENV_PY = ROOT / ".venv" / ("Scripts/python.exe" if os.name == "nt" else "bin/python")
 PYTHON = str(VENV_PY) if VENV_PY.exists() else sys.executable
+
+KEY = None      # resolved in main(), passed to child processes
 
 COLOURS = {"grounding": "\033[36m", "intake": "\033[33m", "queue-ui": "\033[35m"}
 DIM, OFF = "\033[90m", "\033[0m"
@@ -86,8 +104,10 @@ def build(names: set[str]) -> list[Service]:
             ["node", "app.js"],
             ROOT, INTAKE_PORT,
             needs=ROOT / "node_modules",
-            # so OP's server forwards to us without anyone editing a .env
-            env={"PRAGYAN_SERVER_URL": GROUNDED_ENDPOINT},
+            # so OP's server forwards to us, and can reach Mistral, without
+            # anyone editing a .env
+            env={"PRAGYAN_SERVER_URL": GROUNDED_ENDPOINT,
+                 **({"MISTRAL_API_KEY": KEY} if KEY else {})},
         ),
         Service(
             "queue-ui",
@@ -100,10 +120,16 @@ def build(names: set[str]) -> list[Service]:
 
 
 def main() -> None:
+    global KEY
     try:
         sys.stdout.reconfigure(encoding="utf-8", errors="replace")
     except Exception:
         pass
+    KEY = mistral_key()
+
+    if not KEY:
+        print("  \033[33mwarning\033[0m no Mistral key found - intake will fail. "
+              "Set mistral_api or MISTRAL_API_KEY in a .env.")
 
     wanted = set(sys.argv[1:])
     services = build(wanted)
