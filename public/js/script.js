@@ -8,7 +8,7 @@ function handleSubmit(event) {
     // Process vitals separately to handle unmeasured fields
     const vitals = {};
     const notMeasured = [];
-    const vitalKeys = ['heartRate', 'respiratoryRate', 'spo2', 'systolicBp', 'diastolicBp', 'temperature'];
+    const vitalKeys = ['heartRate', 'respiratoryRate', 'spo2', 'systolicBp', 'diastolicBp', 'temperature', 'painScore'];
 
     vitalKeys.forEach(key => {
         if (data[key] && data[key].trim() !== '') {
@@ -32,7 +32,11 @@ function handleSubmit(event) {
         },
         arrival_mode: data.arrivalMode,
         chief_complaint: data.chiefComplaint,
+        pulse_present: data.pulsePresent === 'true',
+        breathing: data.breathing === 'true',
         alertness_avpu: data.avpu,
+        mechanism: data.mechanism || null,
+        allergies: data.allergies || null,
         known_conditions: data.knownConditions || null,
         medications: data.medications || null,
         vitals: vitals

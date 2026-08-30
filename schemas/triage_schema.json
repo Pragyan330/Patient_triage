@@ -1,5 +1,10 @@
 {
   "patient_id": "string",
+  "age": "number",
+  "avpu": "string",
+  "pulse_present": "boolean",
+  "breathing": "boolean",
+  "mechanism_flags": ["string array"],
   "concern": "string",
   "what_keeps_it_open": "string",
   "arrival_mode_note": "string",
@@ -12,6 +17,7 @@
     "systolic_bp": "number",
     "spo2": "number",
     "temperature_c": "number",
+    "pain_score": "number",
     "not_measured": ["string array"]
   },
   "lookups": [
@@ -21,7 +27,7 @@
       "presentation_terms": ["string array"],
       "prefer_document": "string",
       "vitals_read": {
-        "key": "value"
+        "key": "number"
       },
       "answer_shape": "string",
       "priority": "number"

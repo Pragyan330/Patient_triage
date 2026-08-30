@@ -71,6 +71,21 @@
                             placeholder="What the patient says is wrong, in their own words..."></textarea>
                     </div>
 
+                    <div class="form-group">
+                        <label for="pulsePresent">Pulse Present?</label>
+                        <select id="pulsePresent" name="pulsePresent" required>
+                            <option value="true" selected>Yes</option>
+                            <option value="false">No</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label for="breathing">Breathing?</label>
+                        <select id="breathing" name="breathing" required>
+                            <option value="true" selected>Yes</option>
+                            <option value="false">No</option>
+                        </select>
+                    </div>
+
                     <div class="form-group full-width">
                         <label>Level of Consciousness (AVPU)</label>
                         <div class="radio-group">
@@ -117,6 +132,18 @@
                         <textarea id="medications" name="medications"
                             placeholder="E.g., Bisoprolol, Metformin... (Leave blank if none or unknown)"></textarea>
                     </div>
+
+                    <div class="form-group full-width">
+                        <label for="allergies">Allergies</label>
+                        <textarea id="allergies" name="allergies"
+                            placeholder="E.g., Penicillin, Peanuts... (Leave blank if none or unknown)"></textarea>
+                    </div>
+
+                    <div class="form-group full-width">
+                        <label for="mechanism">Mechanism of Injury / Special Flags</label>
+                        <textarea id="mechanism" name="mechanism"
+                            placeholder="E.g., Fall from height, RTC, Burn... (Leave blank if none)"></textarea>
+                    </div>
                 </div>
             </div>
 
@@ -153,6 +180,10 @@
                         <label for="temperature">Temperature (°C)</label>
                         <input type="number" id="temperature" name="temperature" step="0.1" min="30" max="45"
                             placeholder="e.g., 36.8">
+                    </div>
+                    <div class="form-group">
+                        <label for="painScore">Pain Score (0-10)</label>
+                        <input type="number" id="painScore" name="painScore" min="0" max="10" placeholder="e.g., 5">
                     </div>
                 </div>
             </div>
