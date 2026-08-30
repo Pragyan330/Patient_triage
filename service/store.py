@@ -27,6 +27,7 @@ import re
 import threading
 import time
 from dataclasses import dataclass, field
+from datetime import datetime, timezone
 from typing import Any
 
 from grounding_module import news2 as news2_mod
@@ -281,7 +282,7 @@ class Registry:
         with self._lock:
             record.state.esi_floor = esi
             record.state.last_check_minute = minute
-            record.events.append(event)
+            record.events.append(self._stamp(event))
 
         log.info("manual override %s: ESI %s -> %s by %s (%s)",
                  patient_id, previous, esi, by, reason)
@@ -298,6 +299,21 @@ class Registry:
                 events.append(event)
         return events
 
+    @staticmethod
+    def _stamp(event: dict) -> dict:
+        """Put a real clock time on every event.
+
+        retriage_loop counts in simulation minutes, which is right for the
+        loop and useless for an audit trail: "T+14m" cannot be reconciled with
+        a shift rota, a handover, or a complaint six weeks later. Stamped here
+        rather than in the loop so that function stays pure.
+        """
+        if "recorded_at" not in event:
+            now = datetime.now(timezone.utc)
+            event["recorded_at"] = now.isoformat(timespec="seconds")
+            event["recorded_at_local"] = now.astimezone().strftime("%H:%M:%S")
+        return event
+
     def _apply(self, record: Record, event: dict, *,
                new_news2: int | None = None, new_red: bool | None = None) -> None:
         """Persist the ratchet. The loop is pure; storing is the caller's job."""
@@ -308,7 +324,7 @@ class Registry:
                 record.state.news2 = int(new_news2)
             if new_red is not None:
                 record.state.single_param_red = new_red
-            record.events.append(event)
+            record.events.append(self._stamp(event))
 
 
 registry = Registry()

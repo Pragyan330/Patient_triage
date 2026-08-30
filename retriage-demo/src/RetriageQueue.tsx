@@ -25,6 +25,10 @@ interface AuditLogEntry {
   by?: string;
   reason?: string;
   direction?: 'escalation' | 'de-escalation' | 'no change';
+  // Wall-clock, not simulation minutes. "T+14m" cannot be reconciled with a
+  // shift rota or a complaint six weeks later; a real time can.
+  at?: string;
+  atIso?: string;
 }
 
 const ESI_COLORS: Record<number, string> = {
@@ -636,6 +640,8 @@ export default function RetriageQueue() {
                           by: event.overridden_by,
                           reason: event.override_reason,
                           direction: event.direction,
+                          at: event.recorded_at_local,
+                          atIso: event.recorded_at,
                           response: {
                             patient_id: p.patient_id,
                             concerns: [{
@@ -734,12 +740,23 @@ function AuditLogEntry({ log }: { log: AuditLogEntry }) {
 
       {log.manual && (
         <div style={{ padding: '0 8px 8px', fontSize: '0.8em', color: '#8b93a3' }}>
+          {log.at && (
+            <span title={log.atIso ? `UTC ${log.atIso}` : undefined}
+              style={{ color: '#d7dae0', fontVariantNumeric: 'tabular-nums',
+                       marginRight: '0.4rem', cursor: log.atIso ? 'help' : undefined }}>
+              {log.at}
+            </span>
+          )}
           by <strong style={{ color: '#d7dae0' }}>{log.by || 'unknown'}</strong>
-          {log.reason
-            ? <> &middot; &ldquo;{log.reason}&rdquo;</>
-            : deEscalated
-              ? <span style={{ color: '#f87171' }}> &middot; no reason recorded</span>
-              : <span style={{ color: '#6f7684' }}> &middot; no reason given (not required to escalate)</span>}
+          <div style={{ marginTop: '2px' }}>
+            {log.reason
+              ? <>Reason: &ldquo;<span style={{ color: '#c3c9d4' }}>{log.reason}</span>&rdquo;</>
+              : deEscalated
+                ? <span style={{ color: '#f87171' }}>No reason recorded</span>
+                : <span style={{ color: '#6f7684' }}>
+                    No reason given &mdash; not required to escalate
+                  </span>}
+          </div>
         </div>
       )}
       {expanded && (
