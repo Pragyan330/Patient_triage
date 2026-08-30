@@ -186,6 +186,13 @@ function OverridePanel({ patient, onClose, onDone }: {
         body: JSON.stringify({ esi: target, reason: reason.trim(), by: by.trim() || 'nurse' }),
       });
       const body = await res.json();
+      if (res.status === 404) {
+        // The registry is in memory, so restarting the service empties it.
+        // "No patient X" on its own reads like data loss; say what happened.
+        throw new Error(
+          'The service no longer has this patient - it was restarted, which '
+          + 'clears the queue. Press "load 22 patients" or re-submit the form.');
+      }
       if (!res.ok) throw new Error(body?.detail ?? `HTTP ${res.status}`);
       onDone(target, body);
     } catch (e: any) {
@@ -424,12 +431,28 @@ export default function RetriageQueue() {
         const feed = await res.json();
         if (cancelled) return;
         setPatients(prev => {
-          // Keep whatever the simulation has already escalated locally; only
-          // add patients we have not seen. Otherwise a poll would undo the
-          // ratchet every few seconds.
-          const known = new Set(prev.map(p => p.patient_id));
-          const added = feed.filter((p: any) => !known.has(p.patient_id)).map(toState);
-          return added.length ? [...prev, ...added] : prev;
+          // Reconcile rather than merely append.
+          //
+          // Appending only was meant to protect the escalate-only ratchet - a
+          // poll must not undo an escalation the simulation has already made.
+          // But it also meant a patient the service no longer has stayed on
+          // screen forever. The registry is in memory, so a restart empties
+          // it, and the queue was then showing ghosts: cards you could click
+          // that answered "No patient TEST-003" because the service had never
+          // heard of them.
+          //
+          // So: keep local state for patients the service still knows, add
+          // the new ones, and drop the rest.
+          const live = new Map(feed.map((p: any) => [p.patient_id, p]));
+          const kept = prev.filter(p => live.has(p.patient_id));
+          const knownIds = new Set(kept.map(p => p.patient_id));
+          const added = feed
+            .filter((p: any) => !knownIds.has(p.patient_id))
+            .map(toState);
+          const next = [...kept, ...added];
+          // Only replace the array when something actually changed, so React
+          // is not re-rendering the whole queue every five seconds.
+          return (next.length === prev.length && added.length === 0) ? prev : next;
         });
         setLive(true);
       } catch {
