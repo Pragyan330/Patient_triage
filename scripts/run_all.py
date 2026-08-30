@@ -177,10 +177,13 @@ def main() -> None:
         print("  \033[33mwarning\033[0m no Mistral key found - intake will fail. "
               "Set mistral_api or MISTRAL_API_KEY in a .env.")
 
-    wanted = set(sys.argv[1:])
+    # flags are not service names; without this, `--no-open` was read as a
+    # service, matched nothing, and the launcher exited
+    wanted = {a for a in sys.argv[1:] if not a.startswith("-")}
     services = build(wanted)
     if not services:
-        sys.exit(f"No such service. Choose from: grounding, intake, queue-ui")
+        sys.exit(f"No such service: {', '.join(sorted(wanted))}. "
+                 f"Choose from: grounding, intake, queue-ui")
 
     print("\n\033[1mpatient triage - all local\033[0m")
     started = [s for s in services if s.start()]
