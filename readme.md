@@ -174,6 +174,7 @@ Last full run: 6/6 cases clean, 28/28 citations verbatim on the page they cite,
 ## Other Modules
 
 ### Intake Service (`app.js` & `views/`)
+![Patient Intake Form](docs/intake-form.png)
 - **Purpose**: The entry point for the triage workflow, replacing traditional paper forms or basic EMR text boxes.
 - **Technologies**: Node.js, Express, Embedded JavaScript templating (EJS).
 - **Workflow**: 
@@ -183,6 +184,7 @@ Last full run: 6/6 cases clean, 28/28 citations verbatim on the page they cite,
 - **Why it matters**: It normalizes messy, human-entered clinical shorthand into clean, structured data ready for deterministic gates and the semantic retrieval module.
 
 ### Nurse Queue UI (`retriage-demo/`)
+![Re-Triage Monitor Queue](docs/retriage-monitor.png)
 - **Purpose**: The real-time situational awareness dashboard for triage nurses.
 - **Technologies**: React, Vite, TypeScript, TailwindCSS.
 - **Features**:
