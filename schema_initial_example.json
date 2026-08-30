@@ -1,5 +1,6 @@
 {
-  "concern": "An infection that has spread beyond its original site and is starting to affect how her body is working",
+  "patient_id": "P-123",
+  "concern": "An infetion that has spread beyond its original site and is starting to affect how her body is working",
   "what_keeps_it_open": "New confusion with a raised breathing rate and a blood pressure at the low end of her likely normal. Nothing here rules it out.",
   "arrival_mode_note": "Walked in rather than arriving by ambulance, which reflects access and family judgement, not severity. It should not lower concern.",
   "medication_effect": "She takes bisoprolol, a beta-blocker, which blunts the heart-rate rise expected with infection. Her heart rate of 88 may look reassuring and should not be read that way.",

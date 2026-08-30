@@ -1,0 +1,32 @@
+{
+  "patient_id": "string",
+  "concern": "string",
+  "what_keeps_it_open": "string",
+  "arrival_mode_note": "string",
+  "medication_effect": "string",
+  "allergy_note": "string",
+  "age_sex_note": "string",
+  "vitals_read": {
+    "heart_rate": "number",
+    "respiratory_rate": "number",
+    "systolic_bp": "number",
+    "spo2": "number",
+    "temperature_c": "number",
+    "not_measured": ["string array"]
+  },
+  "lookups": [
+    {
+      "intent": "string",
+      "question": "string",
+      "presentation_terms": ["string array"],
+      "prefer_document": "string",
+      "vitals_read": {
+        "key": "value"
+      },
+      "answer_shape": "string",
+      "priority": "number"
+    }
+  ],
+  "implied_esi": "number",
+  "implied_esi_reasoning": "string"
+}
