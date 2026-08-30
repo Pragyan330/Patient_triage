@@ -149,7 +149,26 @@ def new_vitals(patient_id: str, vitals: dict = Body(...)) -> dict:
     log.info("retriage %s  %s  esi %s -> %s", patient_id,
              event["trigger"]["type"], event["previous_esi_floor"],
              event["new_esi_floor"])
-    return event
+
+    # Also answer in PragyanResponse shape so retriage-demo can drop its mock
+    # without reshaping anything. The full event stays under `event`.
+    esi = event["new_esi_floor"]
+    return {
+        "patient_id": patient_id,
+        "concerns": [{
+            "concern": event["trigger"]["detail"] or "Physiological change",
+            "clinical_shorthand": f"?{event['trigger']['type'].replace('_', ' ')}",
+            "implied_esi": event["previous_esi_floor"],
+            "final_esi": esi,
+            "time_to_treatment_minutes": event.get("next_check_due_minutes"),
+            "evidence": event.get("evidence") or [],
+            "nurse_summary": event["nurse_summary"],
+        }],
+        "provisional_esi": event["previous_esi_floor"],
+        "grounded_esi": esi,
+        "retrieval_ms": 0,
+        "event": event,
+    }
 
 
 @app.post("/api/sweep")

@@ -91,6 +91,52 @@ class Service:
             self.proc.terminate()
 
 
+def wait_until_up(url: str, timeout: float = 45.0) -> bool:
+    """Poll a URL until it answers. Opening a tab before the server is
+    listening just shows the browser's own error page."""
+    import urllib.error
+    import urllib.request
+    deadline = time.time() + timeout
+    while time.time() < deadline:
+        try:
+            urllib.request.urlopen(url, timeout=2)
+            return True
+        except urllib.error.HTTPError:
+            return True          # answered, just not with a 200
+        except Exception:
+            time.sleep(0.5)
+    return False
+
+
+def open_tabs(started: list[Service]) -> None:
+    """Open the two pages you actually work in, once they are ready.
+
+    Only the intake form and the queue UI. The API docs and the raw feed are
+    printed above for when they are wanted - opening four tabs every launch is
+    noise, not convenience.
+    """
+    import webbrowser
+
+    running = {s.name for s in started}
+    targets = []
+    if "intake" in running:
+        targets.append((f"http://localhost:{INTAKE_PORT}/patient_info",
+                        f"http://localhost:{INTAKE_PORT}/"))
+    if "queue-ui" in running:
+        targets.append((f"http://localhost:{QUEUE_UI_PORT}/",
+                        f"http://localhost:{QUEUE_UI_PORT}/"))
+
+    def opener() -> None:
+        for page, probe in targets:
+            if wait_until_up(probe):
+                webbrowser.open(page)
+                time.sleep(0.8)     # let the browser settle between tabs
+            else:
+                print(f"  {DIM}not opening {page} - never came up{OFF}")
+
+    threading.Thread(target=opener, daemon=True).start()
+
+
 def build(names: set[str]) -> list[Service]:
     services = [
         Service(
@@ -142,11 +188,14 @@ def main() -> None:
         sys.exit("\nNothing started. Run `npm install` for the Node services.")
 
     print(f"\n  intake form   http://localhost:{INTAKE_PORT}/patient_info")
-    print(f"  API docs      http://localhost:{GROUNDING_PORT}/docs")
     print(f"  queue UI      http://localhost:{QUEUE_UI_PORT}")
+    print(f"  API docs      http://localhost:{GROUNDING_PORT}/docs")
     print(f"  live feed     http://localhost:{GROUNDING_PORT}/api/patients.json")
     print(f"\n  {DIM}intake forwards to {GROUNDED_ENDPOINT}{OFF}")
     print(f"  {DIM}Ctrl-C to stop everything{OFF}\n")
+
+    if "--no-open" not in sys.argv:
+        open_tabs(started)
 
     def shutdown(*_):
         print("\n  stopping...")

@@ -21,18 +21,43 @@ demo and must not ship to a ward.
 """
 from __future__ import annotations
 
+import itertools
+import re
 import threading
 import time
 from dataclasses import dataclass, field
 from typing import Any
 
+from grounding_module import news2 as news2_mod
 from grounding_module.news2 import age_from_schema
 from retriage_loop import NewVitals, PatientState, retriage_check
+
+
+# The intake LLM fills patient_id from whatever the form gave it. Observed in
+# live runs: a person's full name ("Abhishek_Sonparote_202311XX") and the
+# string "null". A null-ish id is worse than missing - the registry keys on it,
+# so two of them silently overwrite each other. Anything that is not clearly an
+# identifier gets a minted one, and the original is kept for traceability.
+NULLISH = {"", "null", "none", "nil", "undefined", "n/a", "na", "unknown", "-"}
+LOOKS_LIKE_ID = re.compile(r"^[A-Za-z]{0,6}[-_ ]?\d{1,10}[A-Za-z]?$")
+_MINTED = itertools.count(1)
+
+
+def clean_patient_id(raw: object) -> tuple[str, str | None]:
+    """Return (usable_id, rejected_original)."""
+    text = "" if raw is None else str(raw).strip()
+    if text.lower() in NULLISH:
+        return f"TEST-{next(_MINTED):03d}", text or None
+    if LOOKS_LIKE_ID.match(text):
+        return text, None
+    # a name, a sentence, anything else: not an identifier
+    return f"TEST-{next(_MINTED):03d}", text
 
 
 @dataclass
 class Record:
     patient_id: str
+    source_patient_id: str | None       # what upstream sent, if we rejected it
     initial: dict                       # what the intake LLM produced
     grounded: dict                      # full output of grounding_module.ground()
     state: PatientState
@@ -46,6 +71,7 @@ class Record:
         top = concerns[0] if concerns else {}
         return {
             "patient_id": self.patient_id,
+            "source_patient_id": self.source_patient_id,
             "esi_floor": self.state.esi_floor,
             "grounded_esi": self.grounded.get("grounded_esi"),
             "news2": self.state.news2 if self.news2_applicable else None,
@@ -80,12 +106,16 @@ class Registry:
     def admit(self, grounded: dict, initial: dict | None = None) -> Record:
         news2 = grounded.get("news2") or {}
         applicable = bool(news2.get("applicable")) and news2.get("total") is not None
-        patient_id = grounded.get("patient_id") or f"P-{len(self._records) + 1:03d}"
+        patient_id, rejected = clean_patient_id(grounded.get("patient_id"))
+        with self._lock:
+            while patient_id in self._records:      # never overwrite a patient
+                patient_id = f"TEST-{next(_MINTED):03d}"
         minute = self.now_minute()
 
         initial = initial or {}
         record = Record(
             patient_id=patient_id,
+            source_patient_id=rejected,
             initial=initial,
             grounded=grounded,
             age_years=age_from_schema(initial) if initial else None,
@@ -121,6 +151,37 @@ class Registry:
 
     # ------------------------------------------------------------- re-triage
 
+    def score_vitals(self, record: Record, vitals: dict) -> tuple[int | None, bool]:
+        """Turn whatever the caller sent into (news2_total, single_param_red).
+
+        The UI sends raw observations - heart_rate, respiratory_rate and so on.
+        Scoring them is this module's job, not the caller's: the whole reason
+        news2.py exists is that the arithmetic must not be done anywhere else.
+        A pre-computed `news2` is still accepted for callers that have one.
+        """
+        if vitals.get("news2") is not None:
+            return int(vitals["news2"]), bool(vitals.get("single_param_red"))
+
+        raw = {k: vitals.get(k) for k in
+               ("respiratory_rate", "spo2", "systolic_bp", "temperature_c")}
+        raw["heart_rate"] = vitals.get("heart_rate", vitals.get("pulse"))
+        raw = {k: v for k, v in raw.items() if v is not None}
+        if not raw:
+            return None, False
+
+        consciousness = vitals.get("consciousness")
+        oxygen = vitals.get("on_supplemental_oxygen")
+        scored = news2_mod.score(
+            raw,
+            on_oxygen=None if oxygen is None else bool(oxygen),
+            consciousness=consciousness,
+            scale=(record.grounded.get("news2") or {}).get("spo2_scale", 1),
+            age_years=record.age_years,
+        )
+        if not scored.applicable:
+            return None, False
+        return scored.total, scored.red_score
+
     def record_vitals(self, patient_id: str, vitals: dict) -> dict:
         record = self._records[patient_id]
 
@@ -135,17 +196,17 @@ class Registry:
                     (record.grounded.get("news2") or {}).get("not_applicable_reason"),
             }
 
+        total, red = self.score_vitals(record, vitals)
+        previous = record.state.news2          # _apply overwrites this below
         event = retriage_check(
             record.state,
             current_minute=self.now_minute(),
-            new_vitals=NewVitals(
-                news2=vitals.get("news2"),
-                single_param_red=bool(vitals.get("single_param_red")),
-                note=vitals.get("note", ""),
-            ),
+            new_vitals=NewVitals(news2=total, single_param_red=red,
+                                 note=vitals.get("note", "")),
         )
-        self._apply(record, event, new_news2=vitals.get("news2"),
-                    new_red=bool(vitals.get("single_param_red")))
+        self._apply(record, event, new_news2=total, new_red=red)
+        event["news2"] = {"total": total, "single_param_red": red,
+                          "previous": previous}
         return event
 
     def sweep(self) -> list[dict]:
